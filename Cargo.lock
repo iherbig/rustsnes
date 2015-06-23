@@ -1,0 +1,4 @@
+[root]
+name = "rustsnes"
+version = "0.1.0"
+
