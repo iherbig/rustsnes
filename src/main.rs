@@ -1,4 +1,5 @@
 #![feature(core)]
+#![feature(core_intrinsics)]
 
 extern crate core;
 

@@ -5,8 +5,6 @@ use emu::memory as mem;
 mod flags;
 use self::flags::Flags::*;
 
-//TODO: create InstructionError struct
-
 pub struct CPU {
 	accumulator:      u16,
 	index_x:          u16,
@@ -36,7 +34,7 @@ impl CPU {
 	
 	pub fn execute(&self, memory: &mut mem::Memory) -> u8 {
 		// opcode <- mem[self.PC]
-		// result<cycles, err> <- function_table[opcode]() //this will update PC
+		// cycles <- function_table[opcode]() //this will update PC
 		// return cycles
 		
 		//anything else?
@@ -44,31 +42,27 @@ impl CPU {
 		1_u8
 	}
 
-	// is there a better way to handle this?
-	fn check_flag(&self, mask: flags::Flags) -> Result<bool, &'static str> {
+	fn check_flag(&self, mask: flags::Flags) -> bool {
 		match mask {
 			IndexRegisterSizeFlag => {
 				match self.check_flag(NativeModeFlag) {
-					Ok(true)  => Ok(self.processor_status & IndexRegisterSizeFlag == 1_u16),
-					Ok(false) => Err("Cannot check index registers size flag when not CPU is in emulator mode."),
-					Err(_)    => unreachable!(),
+					true  => self.processor_status & IndexRegisterSizeFlag == 1_u16,
+					_     => false,
 				}
 			},
 			AccumulatorRegisterSizeFlag => {
 				match self.check_flag(NativeModeFlag) {
-					Ok(true)  => Ok(self.processor_status & AccumulatorRegisterSizeFlag == 1_u16),
-					Ok(false) => Err("Cannot check accumulator register size flag when not CPU is in emulator mode."),
-					Err(_)    => unreachable!(),
+					true  => self.processor_status & AccumulatorRegisterSizeFlag == 1_u16,
+					_     => false,
 				}
 			},
 			ProgramBreakInterruptFlag => {
 				match self.check_flag(NativeModeFlag) {
-					Ok(true)  => Err("Cannot check program break interrupt flag when in native mode."),
-					Ok(false) => Ok(self.processor_status & IndexRegisterSizeFlag == 1_u16),
-					Err(_)    => unreachable!(),
+					true  => false,
+					_     => self.processor_status & IndexRegisterSizeFlag == 1_u16,
 				}
 			},
-			_ => Ok(self.processor_status & mask == 1_u16),
+			_ => self.processor_status & mask == 1_u16,
 		}
 	}
 
@@ -81,9 +75,17 @@ impl CPU {
 	}
 
 	// start instructions
-	// TODO: change this to return a Result<u8, Error>
-	fn add_with_carry_direct_page_indexed_indirect_x(&mut self, memory: &mut mem::Memory) {
-		let address = self.direct_page + self.index_x;
+    // TODO: Look up addressing modes for the 65816: wiki.superfamicom.org has a lot of details
+    // missing
+
+    // something's missing here
+    // this instruction is a two-byte instruction
+    // the opcode uses up one of the bytes, where's the other?
+	fn add_with_carry_direct_page_indexed_indirect_x(&mut self, memory: &mut mem::Memory) -> u8 {
+		let address    = self.direct_page + self.index_x;
+        let cycles: u8 = 6
+                           + (if self.check_flag(AccumulatorRegisterSizeFlag) { 1 } else { 0 }) // is this right? what if the CPU is in emulator mode?
+                           + (if ((self.direct_page & 0x000F) as u8) == 0 { 0 } else { 1 });
 
 		unsafe {
 			let (result, overflow) = intrinsics::u16_add_with_overflow(memory.get_word_from_ram(address as usize), 1);
@@ -95,6 +97,10 @@ impl CPU {
 
 			self.accumulator = result as u16;
 		}
+
+        self.program_counter += 2;
+
+        cycles
 	}
 }
 
