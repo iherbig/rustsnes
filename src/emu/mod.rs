@@ -32,7 +32,7 @@ impl Emu {
 		let video = video::Video::new();
 		let cpu = cpu::CPU::new();
 		let io = io::IO::new();
-		let memory = memory::Memory::new(rom);
+		let memory = memory::Memory::new(&rom);
 	
 		Emu {
 			audio: audio,
@@ -44,16 +44,21 @@ impl Emu {
 	}
 
 	pub fn start(&mut self) {
-		loop {
-			let cycles = self.cpu.execute(&mut self.memory);
-			self.audio.execute(&mut self.memory, cycles);
-			self.video.execute(&mut self.memory, cycles);
-			self.interrupts();
-		}
+		// figure this out after filling in the cpu, audio,
+		// video, and interrupts
+
+		// cpu execute and return num cycles
+		// video execute until caught up with number of cycles executed by cpu
+		// audio execute until caught up with number of cycles exected by cpu
+		// handle interrupts
+
+		// if we have to, draw stuff (figure out what to use)
+		// do we do audio here, too?
+		// how is IO handled?
 	}
 
 	pub fn interrupts(&self) {
-		println!("Interrupts!");
+		// figure this out after cpu, video, audio
 	}
 }
 

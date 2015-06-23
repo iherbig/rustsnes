@@ -3,6 +3,9 @@ use std::intrinsics;
 use emu::memory as mem;
 
 mod flags;
+use self::flags::Flags::*;
+
+//TODO: create InstructionError struct
 
 pub struct CPU {
 	accumulator:      u16,
@@ -32,40 +35,36 @@ impl CPU {
 	}
 	
 	pub fn execute(&self, memory: &mut mem::Memory) -> u8 {
-		println!("Execute!");
+		// opcode <- mem[self.PC]
+		// result<cycles, err> <- function_table[opcode]() //this will update PC
+		// return cycles
 		
-		memory.set_ram_word(0xfff0, 234);
-		let result = memory.get_word_from_ram(0xfff0);
-		
-		println!("Retrieved {:08b}", result);
+		//anything else?
 
-		let first_two = [memory.get_word_from_rom(0), memory.get_word_from_rom(1)];
-
-		println!("First two words in ROM are: {:?}", first_two);
-
-		1
+		1_u8
 	}
 
+	// is there a better way to handle this?
 	fn check_flag(&self, mask: flags::Flags) -> Result<bool, &'static str> {
 		match mask {
-			flags::Flags::IndexRegisterSizeFlag => {
-				match self.check_flag(flags::Flags::NativeModeFlag) {
-					Ok(true)  => Ok(self.processor_status & flags::Flags::IndexRegisterSizeFlag == 1_u16),
+			IndexRegisterSizeFlag => {
+				match self.check_flag(NativeModeFlag) {
+					Ok(true)  => Ok(self.processor_status & IndexRegisterSizeFlag == 1_u16),
 					Ok(false) => Err("Cannot check index registers size flag when not CPU is in emulator mode."),
 					Err(_)    => unreachable!(),
 				}
 			},
-			flags::Flags::AccumulatorRegisterSizeFlag => {
-				match self.check_flag(flags::Flags::NativeModeFlag) {
-					Ok(true)  => Ok(self.processor_status & flags::Flags::AccumulatorRegisterSizeFlag == 1_u16),
+			AccumulatorRegisterSizeFlag => {
+				match self.check_flag(NativeModeFlag) {
+					Ok(true)  => Ok(self.processor_status & AccumulatorRegisterSizeFlag == 1_u16),
 					Ok(false) => Err("Cannot check accumulator register size flag when not CPU is in emulator mode."),
 					Err(_)    => unreachable!(),
 				}
 			},
-			flags::Flags::ProgramBreakInterruptFlag => {
-				match self.check_flag(flags::Flags::NativeModeFlag) {
+			ProgramBreakInterruptFlag => {
+				match self.check_flag(NativeModeFlag) {
 					Ok(true)  => Err("Cannot check program break interrupt flag when in native mode."),
-					Ok(false) => Ok(self.processor_status & flags::Flags::IndexRegisterSizeFlag == 1_u16),
+					Ok(false) => Ok(self.processor_status & IndexRegisterSizeFlag == 1_u16),
 					Err(_)    => unreachable!(),
 				}
 			},
@@ -81,16 +80,18 @@ impl CPU {
 		}
 	}
 
+	// start instructions
+	// TODO: change this to return a Result<u8, Error>
 	fn add_with_carry_direct_page_indexed_indirect_x(&mut self, memory: &mut mem::Memory) {
 		let address = self.direct_page + self.index_x;
 
 		unsafe {
 			let (result, overflow) = intrinsics::u16_add_with_overflow(memory.get_word_from_ram(address as usize), 1);
 
-			self.set_flag(flags::Flags::NegativeFlag, result & 0x8000 == 0x8000);
-			self.set_flag(flags::Flags::OverflowFlag, overflow);
-			self.set_flag(flags::Flags::ZeroFlag, result == 0);
-			self.set_flag(flags::Flags::CarryFlag, overflow);
+			self.set_flag(NegativeFlag, result & 0x8000 == 0x8000);
+			self.set_flag(OverflowFlag, overflow);
+			self.set_flag(ZeroFlag, result == 0);
+			self.set_flag(CarryFlag, overflow);
 
 			self.accumulator = result as u16;
 		}

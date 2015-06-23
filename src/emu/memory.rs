@@ -8,7 +8,7 @@ pub struct Memory {
 }
 
 impl Memory {
-	pub fn new(rom: File) -> Memory {
+	pub fn new(rom: &File) -> Memory {
 		let mut memory = Memory { ram: [0; 131072], rom: Vec::new() };
 		match memory.load_rom(rom) {
 			Ok(_) => memory,
@@ -16,7 +16,7 @@ impl Memory {
 		}
 	}
 
-	fn load_rom(&mut self, rom: File) -> Result<(), Error> {
+	fn load_rom(&mut self, rom: &File) -> Result<(), Error> {
 		for byte in rom.bytes() {
 			match byte {
 				Ok(b) => {
@@ -27,6 +27,22 @@ impl Memory {
 		}
 
 		Ok(())
+	}
+
+	pub fn get_byte_from_ram(&self, address: usize) -> u8 {
+		self.ram[address]
+	}
+
+	pub fn set_ram_byte(&mut self, address: usize, value: u8) {
+		self.ram[address] = value;
+	}
+
+	pub fn get_byte_from_rom(&self, address: usize) -> u8 {
+		self.rom[address]
+	}
+
+	pub fn set_rom_byte(&mut self, address: usize, value: u8) {
+		self.rom[address] = value;
 	}
 
 	pub fn get_word_from_ram(&self, address: usize) -> u16 {
