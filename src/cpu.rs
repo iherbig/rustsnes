@@ -18,7 +18,7 @@ pub struct CPU {
 
 impl CPU {
 	pub fn new(memory: Memory) -> CPU {
-		CPU {
+        CPU {
             accumulator:      0,
             index_x:          0,
             index_y:          0,
@@ -30,7 +30,7 @@ impl CPU {
             program_counter:  0,
             emulation_mode:   1,
             memory:      memory,
-		}
+        }
 	}
 
     pub fn set_origin(&mut self, addr: u16) {
