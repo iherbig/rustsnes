@@ -3,15 +3,15 @@ use flags::Flags;
 use flags::Flags::*;
 
 pub struct CPU {
-	accumulator:      u16,
-	index_x:          u16,
-	index_y:          u16,
-	stack_pointer:    u16,
-	data_bank:         u8,
-	direct_page:      u16,
-	program_bank:      u8,
-	processor_status:  u8,
-	program_counter:  u16,
+    accumulator:      u16,
+    index_x:          u16,
+    index_y:          u16,
+    stack_pointer:    u16,
+    data_bank:         u8,
+    direct_page:      u16,
+    program_bank:      u8,
+    processor_status:  u8,
+    program_counter:  u16,
     emulation_mode:    u8,
     pub memory:    Memory,
 }
@@ -19,15 +19,15 @@ pub struct CPU {
 impl CPU {
 	pub fn new(memory: Memory) -> CPU {
 		CPU {
-			accumulator:      0,
-			index_x:          0,
-			index_y:          0,
-			stack_pointer:    0,
-			data_bank:        0,
-			direct_page:      0,
-			program_bank:     0,
-			processor_status: 0,
-			program_counter:  0,
+            accumulator:      0,
+            index_x:          0,
+            index_y:          0,
+            stack_pointer:    0,
+            data_bank:        0,
+            direct_page:      0,
+            program_bank:     0,
+            processor_status: 0,
+            program_counter:  0,
             emulation_mode:   1,
             memory:      memory,
 		}
@@ -49,8 +49,8 @@ impl CPU {
         self.processor_status
     }
 	
-	pub fn execute(&mut self, num_instructions: usize) {
-       for i in 0..num_instructions {
+    pub fn execute(&mut self, num_instructions: usize) {
+        for i in 0..num_instructions {
            //let opcode = self.memory.get_byte(self.program_counter as usize);
            let mode = Absolute;
            self.adc(&mode);
@@ -60,7 +60,7 @@ impl CPU {
         // execute instruction
 		
 		//anything else?
-	}
+    }
 
 	pub fn check_flag(&self, mask: Flags) -> bool {
 		match mask {
@@ -68,8 +68,8 @@ impl CPU {
             ZeroFlag                    => (self.processor_status & 0b00000010) >> 1 == 1,
             IRQDisableFlag              => (self.processor_status & 0b00000100) >> 2 == 1,
             DecimalFlag                 => (self.processor_status & 0b00001000) >> 3 == 1,
-			IndexRegisterSizeFlag       => (self.processor_status & 0b00010000) >> 4 == 1,
-			AccumulatorRegisterSizeFlag => (self.processor_status & 0b00100000) >> 5 == 1,
+            IndexRegisterSizeFlag       => (self.processor_status & 0b00010000) >> 4 == 1,
+            AccumulatorRegisterSizeFlag => (self.processor_status & 0b00100000) >> 5 == 1,
             ProgramBreakInterruptFlag   => (self.processor_status & 0b00010000) >> 4 == 1,
             OverflowFlag                => (self.processor_status & 0b01000000) >> 6 == 1,
             NegativeFlag                => (self.processor_status & 0b10000000) >> 7 == 1,
