@@ -1,14 +1,10 @@
-use std::io::Error;
-use std::fs::File;
-use std::io::Read;
-
 pub struct Memory {
-	ram: [u8; 4096],
+	ram: Vec<u8>,
 }
 
 impl Memory {
     pub fn new() -> Memory {
-        Memory { ram: [0; 4096] }
+        Memory { ram: vec![0; 16777215] }
     }
 
 	pub fn get_byte(&self, address: usize) -> u8 {
