@@ -1,6 +1,7 @@
 use memory::Memory;
 use flags::Flags;
 use flags::Flags::*;
+use self::InstructionType::*;
 
 pub struct CPU {
     accumulator:      u16,
@@ -53,7 +54,9 @@ impl CPU {
         for i in 0..num_instructions {
            //let opcode = self.memory.get_byte(self.program_counter as usize);
            let mode = Absolute;
-           self.adc(&mode);
+           let inst_type = LocatingData;
+           self.program_counter += 1;
+           self.adc(&mode, inst_type);
         }
 
         // decode opcode to get appropriate instruction function
@@ -318,10 +321,10 @@ impl CPU {
     //ADC, //79 Absolute Indexed, Y 3 4(1,3,4)
     //ADC, //7D Absolute Indexed, X 3 4(1,3,4)
     //ADC, //7F Absolute Long Indexed, X 4 5(1,4)
-    fn adc(&mut self, mode: &Instruction) {
+    fn adc(&mut self, mode: &Instruction, inst_type: InstructionType) {
         use self::Instruction;
 
-        let data: u16 = mode.load(self);
+        let data: u16 = mode.load(inst_type, self);
         let mut result: u32;
         let mut overflow = false;
         let acc = self.accumulator;
@@ -638,24 +641,35 @@ impl CPU {
 }
 
 pub trait Instruction {
-    fn load(&self, cpu: &mut CPU) -> u16;
-    fn store(&self, cpu: &mut CPU, data: u16);
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16;
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16);
+}
+
+pub enum InstructionType {
+    LocatingData,
+    ControlTransfer,
 }
 
 struct Absolute;
 impl Instruction for Absolute {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         let pc = cpu.program_counter as usize;
-        let high = cpu.memory.get_byte(pc + 1) as u32;
-        let low = cpu.memory.get_byte(pc + 2) as u32;
-        let addr: u32 = (cpu.data_bank as u32) << 16 | high << 8 | low;
+        let bank = {
+            match inst_type {
+                LocatingData    =>    cpu.data_bank as u32,
+                ControlTransfer => cpu.program_bank as u32,
+            }
+        };
+        let high = cpu.memory.get_byte(pc) as u32;
+        let low = cpu.memory.get_byte(pc + 1) as u32;
+        let addr: u32 = bank << 16 | high << 8 | low;
 
-        cpu.program_counter += 3;
+        cpu.program_counter += 2;
 
         cpu.memory.get_word(addr as usize)
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
         let pc = cpu.program_counter as usize;
         let high = cpu.memory.get_byte(pc + 1) as u32;
         let low = cpu.memory.get_byte(pc + 2) as u32;
@@ -669,321 +683,321 @@ impl Instruction for Absolute {
 
 struct AbsoluteIndexedX;
 impl Instruction for AbsoluteIndexedX {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteIndexedY;
 impl Instruction for AbsoluteIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteIndexedIndirect;
 impl Instruction for AbsoluteIndexedIndirect {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteIndirect;
 impl Instruction for AbsoluteIndirect {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteIndirectLong;
 impl Instruction for AbsoluteIndirectLong {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteLong;
 impl Instruction for AbsoluteLong {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteLongIndexedX;
 impl Instruction for AbsoluteLongIndexedX {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct Accumulator;
 impl Instruction for Accumulator {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct BlockMove;
 impl Instruction for BlockMove {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPage;
 impl Instruction for DirectPage {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndexedX;
 impl Instruction for DirectPageIndexedX {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndexedY;
 impl Instruction for DirectPageIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndexedIndirectX;
 impl Instruction for DirectPageIndexedIndirectX {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndirect;
 impl Instruction for DirectPageIndirect {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndirectLong;
 impl Instruction for DirectPageIndirectLong {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndirectIndexedY;
 impl Instruction for DirectPageIndirectIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndirectLongIndexedY;
 impl Instruction for DirectPageIndirectLongIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct Immediate;
 impl Instruction for Immediate {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct Implied;
 impl Instruction for Implied {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct ProgramCounterRelative;
 impl Instruction for ProgramCounterRelative {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct ProgramCounterRelativeLong;
 impl Instruction for ProgramCounterRelativeLong {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackAbsolute;
 impl Instruction for StackAbsolute {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackDirectPageIndirect;
 impl Instruction for StackDirectPageIndirect {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackInterrupt;
 impl Instruction for StackInterrupt {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackProgramCounterRelative;
 impl Instruction for StackProgramCounterRelative {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackPull;
 impl Instruction for StackPull {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackPush;
 impl Instruction for StackPush {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRTI;
 impl Instruction for StackRTI {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRTL;
 impl Instruction for StackRTL {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRTS;
 impl Instruction for StackRTS {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRelative;
 impl Instruction for StackRelative {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRelativeIndirectIndexedY;
 impl Instruction for StackRelativeIndirectIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
+    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
     }
 }
 
