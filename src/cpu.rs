@@ -3,6 +3,1037 @@ use flags::Flags;
 use flags::Flags::*;
 use self::InstructionType::*;
 
+macro_rules! decode_op_and_execute {
+    ($op:expr, $this:ident) => (
+        match $op {
+            0x00 => {
+                let mode = StackInterrupt;
+                $this.brk(&mode);
+            },
+            0x01 => {
+                let mode = DirectPageIndexedIndirectX;
+                $this.ora(&mode);
+            },
+            0x02 => {
+                let mode = StackInterrupt;
+                $this.cop(&mode);
+            },
+            0x03 => {
+                let mode = StackRelative;
+                $this.ora(&mode);
+            },
+            0x04 => {
+                let mode = DirectPage;
+                $this.tsb(&mode);
+            },
+            0x05 => {
+                let mode = DirectPage;
+                $this.ora(&mode);
+            },
+            0x06 => {
+                let mode = DirectPage;
+                $this.asl(&mode);
+            },
+            0x07 => {
+                let mode = DirectPageIndirectLong;
+                $this.ora(&mode);
+            },
+            0x08 => {
+                let mode = StackPush;
+                $this.php(&mode);
+            },
+            0x09 => {
+                let mode = Immediate;
+                $this.ora(&mode);
+            },
+            0x0A => {
+                let mode = Accumulator;
+                $this.asl(&mode);
+            },
+            0x0B => {
+                let mode = StackPush;
+                $this.phd(&mode);
+            },
+            0x0C => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.tsb(&mode);
+            },
+            0x0D => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.ora(&mode);
+            },
+            0x0E => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.asl(&mode);
+            },
+            0x0F => {
+                let mode = AbsoluteLong;
+                $this.ora(&mode);
+            },
+            0x10 => {
+                let mode = ProgramCounterRelative;
+                $this.blp(&mode);
+            },
+            0x11 => {
+                let mode = DirectPageIndirectIndexedY;
+                $this.ora(&mode);
+            },
+            0x12 => {
+                let mode = DirectPageIndirect;
+                $this.ora(&mode);
+            },
+            0x13 => {
+                let mode = StackRelativeIndirectIndexedY;
+                $this.ora(&mode);
+            },
+            0x14 => {
+                let mode = DirectPage;
+                $this.trb(&mode);
+            },
+            0x15 => {
+                let mode = DirectPageIndexedX;
+                $this.ora(&mode);
+            },
+            0x16 => {
+                let mode = DirectPageIndexedX;
+                $this.asl(&mode);
+            },
+            0x17 => {
+                let mode = DirectPageIndirectLongIndexedY;
+                $this.ora(&mode);
+            },
+            0x18 => {
+                let mode = Implied;
+                $this.clc(&mode);
+            },
+            0x19 => {
+                let mode = AbsoluteIndexedY;
+                $this.ora(&mode);
+            },
+            0x1A => {
+                let mode = Accumulator;
+                $this.inc(&mode);
+            },
+            0x1B => {
+                let mode = Implied;
+                $this.tcs(&mode);
+            },
+            0x1C => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.trb(&mode);
+            },
+            0x1D => {
+                let mode = AbsoluteIndexedX;
+                $this.ora(&mode);
+            },
+            0x1E => {
+                let mode = AbsoluteIndexedX;
+                $this.asl(&mode);
+            },
+            0x1F => {
+                let mode = AbsoluteLongIndexedX;
+                $this.ora(&mode);
+            },
+            0x20 => {
+                let mode = Absolute { instruction_type: ControlTransfer };
+                $this.jsr(&mode);
+            },
+            0x21 => {
+                let mode = DirectPageIndexedIndirectX;
+                $this.and(&mode);
+            },
+            0x22 => {
+                let mode = AbsoluteLong;
+                $this.jsr(&mode);
+            },
+            0x23 => {
+                let mode = StackRelative;
+                $this.and(&mode);
+            },
+            0x24 => {
+                let mode = DirectPage;
+                $this.bit(&mode);
+            },
+            0x25 => {
+                let mode = DirectPage;
+                $this.and(&mode);
+            },
+            0x26 => {
+                let mode = DirectPage;
+                $this.rol(&mode);
+            },
+            0x27 => {
+                let mode = DirectPageIndirectLong;
+                $this.and(&mode);
+            },
+            0x28 => {
+                let mode = StackPull;
+                $this.plp(&mode);
+            },
+            0x29 => {
+                let mode = Immediate;
+                $this.and(&mode);
+            },
+            0x2A => {
+                let mode = Accumulator;
+                $this.rol(&mode);
+            },
+            0x2B => {
+                let mode = StackPull;
+                $this.pld(&mode);
+            },
+            0x2C => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.bit(&mode);
+            },
+            0x2D => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.and(&mode);
+            },
+            0x2E => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.rol(&mode);
+            },
+            0x2F => {
+                let mode = AbsoluteLong;
+                $this.and(&mode);
+            },
+            0x30 => {
+                let mode = ProgramCounterRelative;
+                $this.bmi(&mode);
+            },
+            0x31 => {
+                let mode = DirectPageIndirectIndexedY;
+                $this.and(&mode);
+            },
+            0x32 => {
+                let mode = DirectPageIndirect;
+                $this.and(&mode);
+            },
+            0x33 => {
+                let mode = StackRelativeIndirectIndexedY;
+                $this.and(&mode);
+            },
+            0x34 => {
+                let mode = DirectPageIndexedX;
+                $this.bit(&mode);
+            },
+            0x35 => {
+                let mode = DirectPageIndexedX;
+                $this.and(&mode);
+            },
+            0x36 => {
+                let mode = DirectPageIndexedX;
+                $this.rol(&mode);
+            },
+            0x37 => {
+                let mode = DirectPageIndirectLongIndexedY;
+                $this.and(&mode);
+            },
+            0x38 => {
+                let mode = Implied;
+                $this.sec(&mode);
+            },
+            0x39 => {
+                let mode = AbsoluteIndexedY;
+                $this.and(&mode);
+            },
+            0x3A => {
+                let mode = Accumulator;
+                $this.dec(&mode);
+            },
+            0x3B => {
+                let mode = Implied;
+                $this.tsc(&mode);
+            },
+            0x3C => {
+                let mode = AbsoluteIndexedX;
+                $this.bit(&mode);
+            },
+            0x3D => {
+                let mode = AbsoluteIndexedX;
+                $this.and(&mode);
+            },
+            0x3E => {
+                let mode = AbsoluteIndexedX;
+                $this.rol(&mode);
+            },
+            0x3F => {
+                let mode = AbsoluteLongIndexedX;
+                $this.and(&mode);
+            },
+            0x40 => {
+                let mode = StackRTI;
+                $this.rti(&mode);
+            },
+            0x41 => {
+                let mode = DirectPageIndexedIndirectX;
+                $this.eor(&mode);
+            },
+            0x42 => {
+                $this.wdm();
+            },
+            0x43 => {
+                let mode = StackRelative;
+                $this.eor(&mode);
+            },
+            0x44 => {
+                let mode = BlockMove;
+                $this.mvp(&mode);
+            },
+            0x45 => {
+                let mode = DirectPage;
+                $this.eor(&mode);
+            },
+            0x46 => {
+                let mode = DirectPage;
+                $this.lsr(&mode);
+            },
+            0x47 => {
+                let mode = DirectPageIndirectLong;
+                $this.eor(&mode);
+            },
+            0x48 => {
+                let mode = StackPush;
+                $this.pha(&mode);
+            },
+            0x49 => {
+                let mode = Immediate;
+                $this.eor(&mode);
+            },
+            0x4A => {
+                let mode = Accumulator;
+                $this.lsr(&mode);
+            },
+            0x4B => {
+                let mode = StackPush;
+                $this.phk(&mode);
+            },
+            0x4C => {
+                let mode = Absolute { instruction_type: ControlTransfer };
+                $this.jmp(&mode);
+            },
+            0x4D => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.eor(&mode);
+            },
+            0x4E => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.lsr(&mode);
+            },
+            0x4F => {
+                let mode = AbsoluteLong;
+                $this.eor(&mode);
+            },
+            0x50 => {
+                let mode = ProgramCounterRelative;
+                $this.bvc(&mode);
+            },
+            0x51 => {
+                let mode = DirectPageIndirectIndexedY;
+                $this.eor(&mode);
+            },
+            0x52 => {
+                let mode = DirectPageIndirect;
+                $this.eor(&mode);
+            },
+            0x53 => {
+                let mode = StackRelativeIndirectIndexedY;
+                $this.eor(&mode);
+            },
+            0x54 => {
+                let mode = BlockMove;
+                $this.mvn(&mode);
+            },
+            0x55 => {
+                let mode = DirectPageIndexedX;
+                $this.eor(&mode);
+            },
+            0x56 => {
+                let mode = DirectPageIndexedX;
+                $this.lsr(&mode);
+            },
+            0x57 => {
+                let mode = DirectPageIndirectLongIndexedY;
+                $this.eor(&mode);
+            },
+            0x58 => {
+                let mode = Implied;
+                $this.cli(&mode);
+            },
+            0x59 => {
+                let mode = AbsoluteIndexedY;
+                $this.eor(&mode);
+            },
+            0x5A => {
+                let mode = StackPush;
+                $this.phy(&mode);
+            },
+            0x5B => {
+                let mode = Implied;
+                $this.tcd(&mode);
+            },
+            0x5C => {
+                let mode = AbsoluteLong;
+                $this.jmp(&mode);
+            },
+            0x5D => {
+                let mode = AbsoluteIndexedX;
+                $this.eor(&mode);
+            },
+            0x5E => {
+                let mode = AbsoluteIndexedX;
+                $this.lsr(&mode);
+            },
+            0x5F => {
+                let mode = AbsoluteLongIndexedX;
+                $this.eor(&mode);
+            },
+            0x60 => {
+                let mode = StackRTS;
+                $this.rts(&mode);
+            },
+            0x61 => {
+                let mode = DirectPageIndexedIndirectX;
+                $this.adc(&mode);
+            },
+            0x62 => {
+                let mode = StackProgramCounterRelative;
+                $this.per(&mode);
+            },
+            0x63 => {
+                let mode = StackRelative;
+                $this.adc(&mode);
+            },
+            0x64 => {
+                let mode = DirectPage;
+                $this.stz(&mode);
+            },
+            0x65 => {
+                let mode = DirectPage;
+                $this.adc(&mode);
+            },
+            0x66 => {
+                let mode = DirectPage;
+                $this.ror(&mode);
+            },
+            0x67 => {
+                let mode = DirectPageIndirectLong;
+                $this.adc(&mode);
+            },
+            0x68 => {
+                let mode = StackPull;
+                $this.pla(&mode);
+            },
+            0x69 => {
+                let mode = Immediate;
+                $this.adc(&mode);
+            },
+            0x6A => {
+                let mode = Accumulator;
+                $this.ror(&mode);
+            },
+            0x6B => {
+                let mode = StackRTL;
+                $this.rtl(&mode);
+            },
+            0x6C => {
+                let mode = AbsoluteIndirect;
+                $this.jmp(&mode);
+            },
+            0x6D => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.adc(&mode);
+            },
+            0x6E => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.ror(&mode);
+            },
+            0x6F => {
+                let mode = AbsoluteLong;
+                $this.adc(&mode);
+            },
+            0x70 => {
+                let mode = ProgramCounterRelative;
+                $this.bvs(&mode);
+            },
+            0x71 => {
+                let mode = DirectPageIndirectIndexedY;
+                $this.adc(&mode);
+            },
+            0x72 => {
+                let mode = DirectPageIndirect;
+                $this.adc(&mode);
+            },
+            0x73 => {
+                let mode = StackRelativeIndirectIndexedY;
+                $this.adc(&mode);
+            },
+            0x74 => {
+                let mode = StackRelativeIndirectIndexedY;
+                $this.stz(&mode);
+            },
+            0x75 => {
+                let mode = DirectPageIndexedX;
+                $this.adc(&mode);
+            },
+            0x76 => {
+                let mode = DirectPageIndexedX;
+                $this.ror(&mode);
+            },
+            0x77 => {
+                let mode = DirectPageIndirectLongIndexedY;
+                $this.adc(&mode);
+            },
+            0x78 => {
+                let mode = Implied;
+                $this.sei(&mode);
+            },
+            0x79 => {
+                let mode = AbsoluteIndexedY;
+                $this.adc(&mode);
+            },
+            0x7A => {
+                let mode = StackPull;
+                $this.ply(&mode);
+            },
+            0x7B => {
+                let mode = Implied;
+                $this.tdc(&mode);
+            },
+            0x7C => {
+                let mode = AbsoluteIndexedIndirect;
+                $this.jmp(&mode);
+            },
+            0x7D => {
+                let mode = AbsoluteIndexedX;
+                $this.adc(&mode);
+            },
+            0x7E => {
+                let mode = AbsoluteIndexedX;
+                $this.ror(&mode);
+            },
+            0x7F => {
+                let mode = AbsoluteLongIndexedX;
+                $this.adc(&mode);
+            },
+            0x80 => {
+                let mode = ProgramCounterRelative;
+                $this.bra(&mode);
+            },
+            0x81 => {
+                let mode = DirectPageIndexedIndirectX;
+                $this.sta(&mode);
+            },
+            0x82 => {
+                let mode = ProgramCounterRelativeLong;
+                $this.brl(&mode);
+            },
+            0x83 => {
+                let mode = StackRelative;
+                $this.sta(&mode);
+            },
+            0x84 => {
+                let mode = DirectPage;
+                $this.sty(&mode);
+            },
+            0x85 => {
+                let mode = DirectPage;
+                $this.sta(&mode);
+            },
+            0x86 => {
+                let mode = DirectPage;
+                $this.stx(&mode);
+            },
+            0x87 => {
+                let mode = DirectPageIndirectLong;
+                $this.sta(&mode);
+            },
+            0x88 => {
+                let mode = Implied;
+                $this.dey(&mode);
+            },
+            0x89 => {
+                let mode = Immediate;
+                $this.bit(&mode);
+            },
+            0x8A => {
+                let mode = Implied;
+                $this.txa(&mode);
+            },
+            0x8B => {
+                let mode = StackPush;
+                $this.phb(&mode);
+            },
+            0x8C => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.sty(&mode);
+            },
+            0x8D => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.sta(&mode);
+            },
+            0x8E => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.stx(&mode);
+            },
+            0x8F => {
+                let mode = AbsoluteLong;
+                $this.sta(&mode);
+            },
+            0x90 => {
+                let mode = ProgramCounterRelative;
+                $this.bcc(&mode);
+            },
+            0x91 => {
+                let mode = DirectPageIndirectIndexedY;
+                $this.sta(&mode);
+            },
+            0x92 => {
+                let mode = DirectPageIndirect;
+                $this.sta(&mode);
+            },
+            0x93 => {
+                let mode = StackRelativeIndirectIndexedY;
+                $this.sta(&mode);
+            },
+            0x94 => {
+                let mode = DirectPageIndexedX;
+                $this.sty(&mode);
+            },
+            0x95 => {
+                let mode = DirectPageIndexedX;
+                $this.sta(&mode);
+            },
+            0x96 => {
+                let mode = DirectPageIndexedY;
+                $this.stx(&mode);
+            },
+            0x97 => {
+                let mode = DirectPageIndirectLongIndexedY;
+                $this.sta(&mode);
+            },
+            0x98 => {
+                let mode = Implied;
+                $this.tya(&mode);
+            },
+            0x99 => {
+                let mode = AbsoluteIndexedY;
+                $this.sta(&mode);
+            },
+            0x9A => {
+                let mode = Implied;
+                $this.txs(&mode);
+            },
+            0x9B => {
+                let mode = Implied;
+                $this.txy(&mode);
+            },
+            0x9C => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.stz(&mode);
+            },
+            0x9D => {
+                let mode = AbsoluteIndexedX;
+                $this.sta(&mode);
+            },
+            0x9E => {
+                let mode = AbsoluteIndexedX;
+                $this.stz(&mode);
+            },
+            0x9F => {
+                let mode = AbsoluteLongIndexedX;
+                $this.sta(&mode);
+            },
+            0xA0 => {
+                let mode = Immediate;
+                $this.ldy(&mode);
+            },
+            0xA1 => {
+                let mode = DirectPageIndexedIndirectX;
+                $this.lda(&mode);
+            },
+            0xA2 => {
+                let mode = Immediate;
+                $this.ldx(&mode);
+            },
+            0xA3 => {
+                let mode = StackRelative;
+                $this.lda(&mode);
+            },
+            0xA4 => {
+                let mode = DirectPage;
+                $this.ldy(&mode);
+            },
+            0xA5 => {
+                let mode = DirectPage;
+                $this.lda(&mode);
+            },
+            0xA6 => {
+                let mode = DirectPage;
+                $this.ldx(&mode);
+            },
+            0xA7 => {
+                let mode = DirectPageIndirectLong;
+                $this.lda(&mode);
+            },
+            0xA8 => {
+                let mode = Implied;
+                $this.tay(&mode);
+            },
+            0xA9 => {
+                let mode = Immediate;
+                $this.lda(&mode);
+            },
+            0xAA => {
+                let mode = Implied;
+                $this.tax(&mode);
+            },
+            0xAB => {
+                let mode = StackPull;
+                $this.plb(&mode);
+            },
+            0xAC => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.ldy(&mode);
+            },
+            0xAD => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.lda(&mode);
+            },
+            0xAE => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.ldx(&mode);
+            },
+            0xAF => {
+                let mode = AbsoluteLong;
+                $this.lda(&mode);
+            },
+            0xB0 => {
+                let mode = ProgramCounterRelative;
+                $this.bcs(&mode);
+            },
+            0xB1 => {
+                let mode = DirectPageIndirectIndexedY;
+                $this.lda(&mode);
+            },
+            0xB2 => {
+                let mode = DirectPageIndirect;
+                $this.lda(&mode);
+            },
+            0xB3 => {
+                let mode = StackRelativeIndirectIndexedY;
+                $this.lda(&mode);
+            },
+            0xB4 => {
+                let mode = DirectPageIndexedX;
+                $this.ldy(&mode);
+            },
+            0xB5 => {
+                let mode = DirectPageIndexedX;
+                $this.lda(&mode);
+            },
+            0xB6 => {
+                let mode = DirectPageIndexedY;
+                $this.ldx(&mode);
+            },
+            0xB7 => {
+                let mode = DirectPageIndirectLongIndexedY;
+                $this.lda(&mode);
+            },
+            0xB8 => {
+                let mode = Implied;
+                $this.clv(&mode);
+            },
+            0xB9 => {
+                let mode = AbsoluteIndexedY;
+                $this.lda(&mode);
+            },
+            0xBA => {
+                let mode = Implied;
+                $this.tsx(&mode);
+            },
+            0xBB => {
+                let mode = Implied;
+                $this.tyx(&mode);
+            },
+            0xBC => {
+                let mode = AbsoluteIndexedX;
+                $this.ldy(&mode);
+            },
+            0xBD => {
+                let mode = AbsoluteIndexedX;
+                $this.lda(&mode);
+            },
+            0xBE => {
+                let mode = AbsoluteIndexedY;
+                $this.ldx(&mode);
+            },
+            0xBF => {
+                let mode = AbsoluteLongIndexedX;
+                $this.lda(&mode);
+            },
+            0xC0 => {
+                let mode = Immediate;
+                $this.cpy(&mode);
+            },
+            0xC1 => {
+                let mode = DirectPageIndexedIndirectX;
+                $this.cmp(&mode);
+            },
+            0xC2 => {
+                let mode = Immediate;
+                $this.rep(&mode);
+            },
+            0xC3 => {
+                let mode = StackRelative;
+                $this.cmp(&mode);
+            },
+            0xC4 => {
+                let mode = DirectPage;
+                $this.cpy(&mode);
+            },
+            0xC5 => {
+                let mode = DirectPage;
+                $this.cmp(&mode);
+            },
+            0xC6 => {
+                let mode = DirectPage;
+                $this.dec(&mode);
+            },
+            0xC7 => {
+                let mode = DirectPageIndirectLong;
+                $this.cmp(&mode);
+            },
+            0xC8 => {
+                let mode = Implied;
+                $this.iny(&mode);
+            },
+            0xC9 => {
+                let mode = Immediate;
+                $this.cmp(&mode);
+            },
+            0xCA => {
+                let mode = Implied;
+                $this.dex(&mode);
+            },
+            0xCB => {
+                let mode = Implied;
+                $this.wai(&mode);
+            },
+            0xCC => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.cpy(&mode);
+            },
+            0xCD => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.cmp(&mode);
+            },
+            0xCE => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.dec(&mode);
+            },
+            0xCF => {
+                let mode = AbsoluteLong;
+                $this.cmp(&mode);
+            },
+            0xD0 => {
+                let mode = ProgramCounterRelative;
+                $this.bne(&mode);
+            },
+            0xD1 => {
+                let mode = DirectPageIndirectIndexedY;
+                $this.cmp(&mode);
+            },
+            0xD2 => {
+                let mode = DirectPageIndirect;
+                $this.cmp(&mode);
+            },
+            0xD3 => {
+                let mode = StackRelativeIndirectIndexedY;
+                $this.cmp(&mode);
+            },
+            0xD4 => {
+                let mode = StackDirectPageIndirect;
+                $this.pei(&mode);
+            },
+            0xD5 => {
+                let mode = DirectPageIndexedX;
+                $this.cmp(&mode)
+            },
+            0xD6 => {
+                let mode = DirectPageIndexedX;
+                $this.dec(&mode);
+            },
+            0xD7 => {
+                let mode = DirectPageIndirectLongIndexedY;
+                $this.cmp(&mode);
+            },
+            0xD8 => {
+                let mode = Implied;
+                $this.cld(&mode);
+            },
+            0xD9 => {
+                let mode = AbsoluteIndexedY;
+                $this.cmp(&mode);
+            },
+            0xDA => {
+                let mode = StackPush;
+                $this.phx(&mode);
+            },
+            0xDB => {
+                let mode = Implied;
+                $this.stp(&mode);
+            },
+            0xDC => {
+                let mode = AbsoluteIndirectLong;
+                $this.jmp(&mode);
+            },
+            0xDD => {
+                let mode = AbsoluteIndexedX;
+                $this.cmp(&mode);
+            },
+            0xDE => {
+                let mode = AbsoluteIndexedX;
+                $this.dec(&mode);
+            },
+            0xDF => {
+                let mode = AbsoluteLongIndexedX;
+                $this.cmp(&mode);
+            },
+            0xE0 => {
+                let mode = Immediate;
+                $this.cpx(&mode);
+            },
+            0xE1 => {
+                let mode = DirectPageIndexedIndirectX;
+                $this.sbc(&mode);
+            },
+            0xE2 => {
+                let mode = Immediate;
+                $this.cpx(&mode);
+            },
+            0xE3 => {
+                let mode = DirectPage;
+                $this.sbc(&mode);
+            },
+            0xE4 => {
+                let mode = DirectPage;
+                $this.inx(&mode);
+            },
+            0xE5 => {
+                let mode = DirectPage;
+                $this.sbc(&mode);
+            },
+            0xE6 => {
+                let mode = DirectPage;
+                $this.inc(&mode);
+            },
+            0xE7 => {
+                let mode = DirectPageIndirectLong;
+                $this.sbc(&mode);
+            },
+            0xE8 => {
+                let mode = Implied;
+                $this.inx(&mode);
+            },
+            0xE9 => {
+                let mode = Immediate;
+                $this.sbc(&mode);
+            },
+            0xEA => {
+                let mode = Implied;
+                $this.nop(&mode);
+            },
+            0xEB => {
+                let mode = Implied;
+                $this.xba(&mode);
+            },
+            0xEC => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.cpx(&mode);
+            },
+            0xED => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.sbc(&mode);
+            },
+            0xEE => {
+                let mode = Absolute { instruction_type: LocatingData };
+                $this.inc(&mode);
+            },
+            0xEF => {
+                let mode = AbsoluteLong;
+                $this.sbc(&mode);
+            },
+            0xF0 => {
+                let mode = ProgramCounterRelative;
+                $this.beq(&mode);
+            },
+            0xF1 => {
+                let mode = DirectPageIndirectIndexedY;
+                $this.sbc(&mode);
+            },
+            0xF2 => {
+                let mode = DirectPageIndirect;
+                $this.sbc(&mode);
+            },
+            0xF3 => {
+                let mode = StackRelativeIndirectIndexedY;
+                $this.sbc(&mode);
+            },
+            0xF4 => {
+                let mode = StackAbsolute;
+                $this.pea(&mode);
+            },
+            0xF5 => {
+                let mode = DirectPageIndexedX;
+                $this.sbc(&mode);
+            },
+            0xF6 => {
+                let mode = DirectPageIndexedX;
+                $this.inc(&mode);
+            },
+            0xF7 => {
+                let mode = DirectPageIndirectLongIndexedY;
+                $this.sbc(&mode);
+            },
+            0xF8 => {
+                let mode = Implied;
+                $this.sed(&mode);
+            },
+            0xF9 => {
+                let mode = AbsoluteIndexedY;
+                $this.sbc(&mode);
+            },
+            0xFA => {
+                let mode = StackPull;
+                $this.plx(&mode);
+            },
+            0xFB => {
+                let mode = Implied;
+                $this.xce(&mode);
+            },
+            0xFC => {
+                let mode = AbsoluteIndexedIndirect;
+                $this.jsr(&mode);
+            },
+            0xFD => {
+                let mode = AbsoluteIndexedX;
+                $this.sbc(&mode);
+            },
+            0xFE => {
+                let mode = AbsoluteIndexedX;
+                $this.inc(&mode);
+            },
+            0xFF => {
+                let mode = AbsoluteLongIndexedX;
+                $this.sbc(&mode);
+            },
+            _ => panic!("{} is not an opcode", $op),
+        }
+    );
+}
+
 pub struct CPU {
     accumulator:      u16,
     index_x:          u16,
@@ -52,17 +1083,10 @@ impl CPU {
 	
     pub fn execute(&mut self, num_instructions: usize) {
         for i in 0..num_instructions {
-           //let opcode = self.memory.get_byte(self.program_counter as usize);
-           let mode = Absolute;
-           let inst_type = LocatingData;
-           self.program_counter += 1;
-           self.adc(&mode, inst_type);
+            let opcode = self.memory.get_byte(self.program_counter as usize);
+            self.program_counter += 1;
+            decode_op_and_execute!(opcode, self);
         }
-
-        // decode opcode to get appropriate instruction function
-        // execute instruction
-		
-		//anything else?
     }
 
 	pub fn check_flag(&self, mask: Flags) -> bool {
@@ -88,243 +1112,118 @@ impl CPU {
 		}
 	}
 
-    //BRK, //00 Stack/Interrupt 2** 7(9)
     fn brk(&mut self, mode: &Instruction) {
     }
 
-    //ORA, //01 DP Indexed Indirect, X 2 6(1,2)
-    //ORA, //03 Stack Relative 2 4(1)
-    //ORA, //05 Direct Page 2 3(1,2)
-    //ORA, //07 DP Indirect Long 2 6(1,2)
-    //ORA, //09 Immediate 2* 2(1)
-    //ORA, //0D Absolute 3 4(1)
-    //ORA, //0F Absolute Long 4 5(1)
-    //ORA, //11 DP Indirect Indexed, Y 2 5(1,2,3)
-    //ORA, //12 DP Indirect 2 5(1,2)
-    //ORA, //13 SR Indirect Indexed, Y 2 7(1)
-    //ORA, //15 DP Indexed, X 2 4(1,2)
-    //ORA, //17 DP Indirect Long Indexed, Y 2 6(1,2)
-    //ORA, //19 Absolute Indexed, Y 3 4(1,3)
-    //ORA, //1D Absolute Indexed, X 3 4(1,3)
-    //ORA, //1F Absolute Long Indexed, X 4 5(1)
     fn ora(&mut self, mode: &Instruction) {
     }
 
-    //COP, //02 Stack/Interrupt 2** 7(9)
     fn cop(&mut self, mode: &Instruction) {
     }
 
-    //TSB, //04 Direct Page 2 5(2,5)
-    //TSB, //0C Absolute 3 6(5)
     fn tsb(&mut self, mode: &Instruction) {
     }
 
-    //ASL, //06 Direct Page 2 5(2,5)
-    //ASL, //0A Accumulator 1 2
-    //ASL, //0E Absolute 3 6(5)
-    //ASL, //16 DP Indexed, X 2 6(2,5)
-    //ASL, //1E Absolute Indexed, X 3 7(5,6)
     fn asl(&mut self, mode: &Instruction) {
     }
 
-    //PHP, //08 Stack (Push) 1 3
     fn php(&mut self, mode: &Instruction) {
     }
 
-    //PHD, //0B Stack (Push) 1 4
     fn phd(&mut self, mode: &Instruction) {
     }
 
-    //BLP, //10 Program Counter Relative 2 2(7,8)
     fn blp(&mut self, mode: &Instruction) {
     }
 
-    //TRB, //14 Direct Page 2 5(2,5)
-    //TRB, //1C Absolute 3 6(5)
     fn trb(&mut self, mode: &Instruction) {
     }
 
-    //CLC, //18 Implied 1 2
     fn clc(&mut self, mode: &Instruction) {
     }
 
-    //INC, //1A Accumulator 1 2
-    //INC, //E6 Direct Page 2 5(2,5)
-    //INC, //EE Absolute 3 6(5)
-    //INC, //F6 DP Indexed, X 2 6(2,5)
-    //INC, //FE Absolute Indexed, X 3 7(5,6)
     fn inc(&mut self, mode: &Instruction) {
     }
 
-    //TCS, //1B Implied 1 2
     fn tcs(&mut self, mode: &Instruction) {
     }
 
-    //JSR, //20 Absolute 3 6
-    //JSR, //22 Absolute Long 4 8
-    //JSR, //FC Absolute Indexed Indirect 3 8
     fn jsr(&mut self, mode: &Instruction) {
     }
 
-    //AND, //21 DP Indexed Indirect, X 2 6(1,2)
-    //AND, //23 Stack Relative 2 4(1)
-    //AND, //25 Direct Page 2 3(1,2)
-    //AND, //27 DP Indirect Long 2 6(1,2)
-    //AND, //29 Immediate 2* 2(1)
-    //AND, //2D Absolute 3 4(1)
-    //AND, //2F Absolute Long 4 5(1)
-    //AND, //31 DP Indirect Indexed, Y 2 5(1,2,3)
-    //AND, //32 DP Indirect 2 5(1,2)
-    //AND, //33 SR Indirect Indexed, Y 2 7(1)
-    //AND, //35 DP Indexed, X 2 4(1,2)
-    //AND, //37 DP Indirect Long Indexed, Y 2 6(1,2)
-    //AND, //39 Absolute Indexed, Y 3 4(1,3)
-    //AND, //3D Absolute Indexed, X 3 4(1,3)
-    //AND, //3F Absolute Long Indexed, X 4 5(1)
     fn and(&mut self, mode: &Instruction) {
     }
 
-    //BIT, //24 Direct Page 2 3(1,2)
-    //BIT, //2C Absolute 3 4(1)
-    //BIT, //34 DP Indexed, X 2 4(1,2)
-    //BIT, //3C Absolute Indexed, X 3 4(1,3)
-    //BIT, //89 Immediate 2* 2(1)
     fn bit(&mut self, mode: &Instruction) {
     }
 
-    //ROL, //26 Direct Page 2 5(2,5)
-    //ROL, //2A Accumulator 1 2
-    //ROL, //2E Absolute 3 6(5)
-    //ROL, //36 DP Indexed, X 2 6(2,5)
-    //ROL, //3E Absolute Indexed, X 3 7(5,6)
     fn rol(&mut self, mode: &Instruction) {
     }
 
-    //PLP, //28 Stack (Pull) 1 4
     fn plp(&mut self, mode: &Instruction) {
     }
 
-    //PLD, //2B Stack (Pull) 1 5
     fn pld(&mut self, mode: &Instruction) {
     }
 
-    //BMI, //30 Program Counter Relative 2 2(7,8)
     fn bmi(&mut self, mode: &Instruction) {
     }
 
-    //SEC, //38 Implied 1 2
     fn sec(&mut self, mode: &Instruction) {
     }
 
-    //DEC, //3A Accumulator 1 2
-    //DEC, //C6 Direct Page 2 5(2,5)
-    //DEC, //CE Absolute 3 6(5)
-    //DEC, //D6 DP Indexed, X 2 6(2,5)
-    //DEC, //DE Absolute Indexed, X 3 7(5,6)
     fn dec(&mut self, mode: &Instruction) {
     }
 
-    //TSC, //3B Implied 1 2
     fn tsc(&mut self, mode: &Instruction) {
     }
 
-    //RTI, //40 Stack/RTI 1 6(9)
     fn rti(&mut self, mode: &Instruction) {
     }
 
-    //EOR, //41 DP Indexed Indirect, X 2 6(1,2)
-    //EOR, //43 Stack Relative 2 4(1)
-    //EOR, //45 Direct Page 2 3(1,2)
-    //EOR, //47 DP Indirect Long 2 6(1,2)
-    //EOR, //49 Immediate 2* 2(1)
-    //EOR, //4D Absolute 3 4(1)
-    //EOR, //4F Absolute Long 4 5(1)
-    //EOR, //51 DP Indirect Indexed, Y 2 5(1,2,3,)
-    //EOR, //52 DP Indirect 2 5(1,2)
-    //EOR, //53 SR Indirect Indexed, Y 2 7(1)
-    //EOR, //55 DP Indexed, X 2 4(1,2)
-    //EOR, //57 DP Indirect Long Indexed, Y 2 6(1,2)
-    //EOR, //59 Absolute Indexed, Y 3 4(1,3)
-    //EOR, //5D Absolute Indexed, X 3 4(1,3)
-    //EOR, //5F Absolute Long Indexed, X 4 5(1)
     fn eor(&mut self, mode: &Instruction) {
     }
 
-    //WDM, //42 2^16 (16)
-    fn wdm(&mut self, mode: &Instruction) {
+    fn wdm(&mut self) {
     }
 
-    //MVP, //44 Block Move 3(13)
     fn mvp(&mut self, mode: &Instruction) {
     }
 
-    //LSR, //46 Direct Page 2 5(2,5)
-    //LSR, //4A Accumulator 1 2
-    //LSR, //4E Absolute 3 6(5)
-    //LSR, //56 DP Indexed, X 2 6(2,5)
-    //LSR, //5E Absolute Indexed, X 3 7(5,6)
     fn lsr(&mut self, mode: &Instruction) {
     }
 
-    //PHA, //48 Stack (Push) 1 3(1)
     fn pha(&mut self, mode: &Instruction) {
     }
 
-    //PHK, //4B Stack (Push) 1 3
     fn phk(&mut self, mode: &Instruction) {
     }
 
-    //JMP, //4C Absolute 3 3
-    //JMP, //5C Absolute Long 4 4
-    //JMP, //6C Absolute Indirect 3 5(11,12)
-    //JMP, //7C Absolute Indexed Indirect 3 6
-    //JMP, //DC Absolute Indirect Long 3 6
     fn jmp(&mut self, mode: &Instruction) {
     }
 
-    //BVC, //50 Program Counter Relative 2 2(7,8)
     fn bvc(&mut self, mode: &Instruction) {
     }
 
-    //MVN, //54 Block Move 3(13)
     fn mvn(&mut self, mode: &Instruction) {
     }
 
-    //CLI, //58 Implied 1 2
     fn cli(&mut self, mode: &Instruction) {
     }
 
-    //PHY, //5A Stack (Push) 1 3(10)
     fn phy(&mut self, mode: &Instruction) {
     }
 
-    //TCD, //5B Implied 1 2
     fn tcd(&mut self, mode: &Instruction) {
     }
 
-    //RTS, //60 Stack (RTS) 1 6
     fn rts(&mut self, mode: &Instruction) {
     }
 
-    //ADC, //61 DP Indexed Indirect, X 2 6(1,2,4)
-    //ADC, //63 Stack Relative 2 4(1,4)
-    //ADC, //65 Direct Page 2 3(1,2,4)
-    //ADC, //67 DP Indirect Long 2 6(1,2,4)
-    //ADC, //69 Immediate 2* 2(1,4)
-    //ADC, //6D Absolute 3 4(1,4)
-    //ADC, //6F Absolute Long 4 5(1,4)
-    //ADC, //71 DP Indirect Indexed, Y 2 5(1,2,3,4)
-    //ADC, //72 DP Indirect 2 5(1,2,4)
-    //ADC, //73 SR Indirect Indexed, Y 2 7(1,4)
-    //ADC, //75 DP Indexed, X 2 4(1,2,4)
-    //ADC, //77 DP Indirect Long Indexed, Y 2 6(1,2,4)
-    //ADC, //79 Absolute Indexed, Y 3 4(1,3,4)
-    //ADC, //7D Absolute Indexed, X 3 4(1,3,4)
-    //ADC, //7F Absolute Long Indexed, X 4 5(1,4)
-    fn adc(&mut self, mode: &Instruction, inst_type: InstructionType) {
+    fn adc(&mut self, mode: &Instruction) {
         use self::Instruction;
 
-        let data: u16 = mode.load(inst_type, self);
+        let data: u16 = mode.load(self);
         let mut result: u32;
         let mut overflow = false;
         let acc = self.accumulator;
@@ -347,302 +1246,171 @@ impl CPU {
         let negative = (self.accumulator & 0x8000) >> 15 == 1;
 
         self.set_flag(NegativeFlag, negative);
-        self.set_flag(OverflowFlag, overflow);
+        self.set_flag(OverflowFlag, (!orig_neg && negative) || (overflow && negative));
         self.set_flag(ZeroFlag, result == 0);
-        self.set_flag(CarryFlag, (!orig_neg && negative) || (overflow && negative));
+        self.set_flag(CarryFlag, overflow);
     }
 
-    //PER, //62 Stack (PC Relative Long) 3 6
     fn per(&mut self, mode: &Instruction) {
     }
 
-    //STZ, //64 Direct Page 2 3(1,2)
-    //STZ, //74 Direct Page Indexed, X 2 4(1,2)
-    //STZ, //9C Absolute 3 4(1)
-    //STZ, //9E Absolute Indexed, X 3 5(1)
     fn stz(&mut self, mode: &Instruction) {
     }
 
-    //ROR, //66 Direct Page 2 5(2,5)
-    //ROR, //6A Accumulator 1 2
-    //ROR, //6E Absolute 3 6(5)
-    //ROR, //76 DP Indexed, X 2 6(2,5)
-    //ROR, //7E Absolute Indexed, X 3 7(5,6)
     fn ror(&mut self, mode: &Instruction) {
     }
 
-    //PLA, //68 Stack (Pull) 1 4(1)
     fn pla(&mut self, mode: &Instruction) {
     }
 
-    //RTL, //6B Stack (RTL) 1 6
     fn rtl(&mut self, mode: &Instruction) {
     }
 
-    //BVS, //70 Program Counter Relative 2 2(7,8)
     fn bvs(&mut self, mode: &Instruction) {
     }
 
-    //SEI, //78 Implied 1 2
     fn sei(&mut self, mode: &Instruction) {
     }
 
-    //PLY, //7A Stack/Pull 1 4(10)
     fn ply(&mut self, mode: &Instruction) {
     }
 
-    //TDC, //7B Implied 1 2
     fn tdc(&mut self, mode: &Instruction) {
     }
 
-    //BRA, //80 Program Counter Relative 2 3(8)
     fn bra(&mut self, mode: &Instruction) {
     }
 
-    //STA, //81 DP Indexed Indirect, X 2 6(1,2)
-    //STA, //83 Stack Relative 2 4(1)
-    //STA, //85 Direct Page 2 3(1,2)
-    //STA, //87 DP Indirect Long 2 6(1,2)
-    //STA, //8D Absolute 3 4(1)
-    //STA, //8F Absolute Long 4 5(1)
-    //STA, //91 DP Indirect Indexed, Y 2 6(1,2)
-    //STA, //92 DP Indirect 2 5(1,2)
-    //STA, //93 SR Indirect Indexed, Y 2 7(1)
-    //STA, //95 DP Indexed, X 2 4(1,2)
-    //STA, //97 DP Indirect Long Indexed, Y 2 6(1,2)
-    //STA, //99 Absolute Indexed, Y 3 5(1)
-    //STA, //9D Absolute Indexed, X 3 5(1)
-    //STA, //9F Absolute Long Indexed, X 4 5(1)
     fn sta(&mut self, mode: &Instruction) {
     }
 
-    //BRL, //82 Program Counter Relative Long 3 4
     fn brl(&mut self, mode: &Instruction) {
     }
 
-    //STY, //84 Direct Page 2 3(2,10)
-    //STY, //8C Absolute 3 4(10)
-    //STY, //94 Direct Page Indexed, X 2 4(2,10)
     fn sty(&mut self, mode: &Instruction) {
     }
 
-    //STX, //86 Direct Page 2 3(2,10)
-    //STX, //8E Absolute 3 4(10)
-    //STX, //96 Direct Page Indexed, Y 2 4(2,10)
     fn stx(&mut self, mode: &Instruction) {
     }
 
-    //DEY, //88 Implied 1 2
     fn dey(&mut self, mode: &Instruction) {
     }
 
-    //TXA, //8A Implied 1 2
     fn txa(&mut self, mode: &Instruction) {
     }
 
-    //PHB, //8B Stack (Push) 1 3
     fn phb(&mut self, mode: &Instruction) {
     }
 
-    //BCC, //90 Program Counter Relative 2 2(7,8)
     fn bcc(&mut self, mode: &Instruction) {
     }
 
-    //TYA, //98 Implied 1 2
     fn tya(&mut self, mode: &Instruction) {
     }
 
-    //TXS, //9A Implied 1 2
     fn txs(&mut self, mode: &Instruction) {
     }
 
-    //TXY, //9B Implied 1 2
     fn txy(&mut self, mode: &Instruction) {
     }
 
-    //LDY, //A0 Immediate 2+ 2(10)
-    //LDY, //A4 Direct Page 2 3(2,10)
-    //LDY, //AC Absolute 3 4(10)
-    //LDY, //B4 DP Indexed, X 2 4(2,10)
-    //LDY, //BC Absolute Indexed, X 3 4(3,10)
     fn ldy(&mut self, mode: &Instruction) {
     }
 
-    //LDA, //A1 DP Indexed Indirect, X 2 6(1,2)
-    //LDA, //A3 Stack Relative 2 4(1)
-    //LDA, //A5 Direct Page 2 3(1,2)
-    //LDA, //A7 DP Indirect Long 2 6(1,2)
-    //LDA, //A9 Immediate 2* 2(1)
-    //LDA, //AD Absolute 3 4(1)
-    //LDA, //AF Absolute Long 4 5(1)
-    //LDA, //B1 DP Indirect Indexed, Y 2 5(1,2,3)
-    //LDA, //B2 DP Indirect 2 5(1,2)
-    //LDA, //B3 SR Indirect Indexed, Y 2 7(1)
-    //LDA, //B5 DP Indexed, X 2 4(1,2)
-    //LDA, //B7 DP Indirect Long Indexed, Y 2 6(1,2)
-    //LDA, //B9 Absolute Indexed, Y 3 4(1,3)
-    //LDA, //BD Absolute Indexed, X 3 4(1,3)
-    //LDA, //BF Absolute Long Indexed, X 4 5(1)
     fn lda(&mut self, mode: &Instruction) {
     }
 
-    //LDX, //A2 Immediate 2+ 2(10)
-    //LDX, //A6 Direct Page 2 3(2,10)
-    //LDX, //AE Absolute 3 4(10)
-    //LDX, //B6 DP Indexed, Y 2 4(2,10)
-    //LDX, //BE Absolute Indexed, Y 3 4(3,10)
     fn ldx(&mut self, mode: &Instruction) {
     }
 
-    //TAY, //A8 Implied 1 2
     fn tay(&mut self, mode: &Instruction) {
     }
 
-    //TAX, //AA Implied 1 2
     fn tax(&mut self, mode: &Instruction) {
     }
 
-    //PLB, //AB Stack (Pull) 1 4
     fn plb(&mut self, mode: &Instruction) {
     }
 
-    //BCS, //B0 Program Counter Relative 2 2(7,8)
     fn bcs(&mut self, mode: &Instruction) {
     }
 
-    //CLV, //B8 Implied 1 2
     fn clv(&mut self, mode: &Instruction) {
     }
 
-    //TSX, //BA Implied 1 2
     fn tsx(&mut self, mode: &Instruction) {
     }
 
-    //TYX, //BB Implied 1 2
     fn tyx(&mut self, mode: &Instruction) {
     }
 
-    //CPY, //C0 Immediate 2+ 2(10)
-    //CPY, //C4 Direct Page 2 3(2,10)
-    //CPY, //CC Absolute 3 4(10)
     fn cpy(&mut self, mode: &Instruction) {
     }
 
-    //CMP, //C1 DP Indexed Indirect, X 2 6(1,2)
-    //CMP, //C3 Stack Relative 2 4(1)
-    //CMP, //C5 Direct Page 2 3(1,2)
-    //CMP, //C7 DP Indirect Long 2 6(1,2)
-    //CMP, //C9 Immediate 2* 2(1)
-    //CMP, //CD Absolute 3 4(1)
-    //CMP, //CF Absolute Long 4 5(1)
-    //CMP, //D1 DP Indirect Indexed, Y 2 5(1,2,3)
-    //CMP, //D2 DP Indirect 2 5(1,2)
-    //CMP, //D3 SR Indirect Indexed, Y 2 7(1)
-    //CMP, //D5 DP Indexed, X 2 4(1,2)
-    //CMP, //D7 DP Indirect Long Indexed, Y 2 6(1,2)
-    //CMP, //D9 Absolute Indexed, Y 3 4(1,3)
-    //CMP, //DD Absolute Indexed, X 3 41,3
-    //CMP, //DF Absolute Long Indexed, X 4 5(1)
     fn cmp(&mut self, mode: &Instruction) {
     }
 
-    //REP, //C2 Immediate 2 3
     fn rep(&mut self, mode: &Instruction) {
     }
 
-    //INY, //C8 Implied 1 2
     fn iny(&mut self, mode: &Instruction) {
     }
 
-    //DEX, //CA Implied 1 2
     fn dex(&mut self, mode: &Instruction) {
     }
 
-    //WAI, //CB Implied 1 3(15)
     fn wai(&mut self, mode: &Instruction) {
     }
 
-    //BNE, //D0 Program Counter Relative 2 2(7,8)
     fn bne(&mut self, mode: &Instruction) {
     }
 
-    //PEI, //D4 Stack (Direct Page Indirect) 2 6(2)
     fn pei(&mut self, mode: &Instruction) {
     }
 
-    //CLD, //D8 Implied 1 2
     fn cld(&mut self, mode: &Instruction) {
     }
 
-    //PHX, //DA Stack (Push) 1 3(10)
     fn phx(&mut self, mode: &Instruction) {
     }
 
-    //STP, //DB Implied 1 3(14)
     fn stp(&mut self, mode: &Instruction) {
     }
 
-    //CPX, //E0 Immediate 2+ 2(10)
-    //CPX, //E2 Immediate 2 3
-    //CPX, //EC Absolute 3 4(10)
     fn cpx(&mut self, mode: &Instruction) {
     }
 
-    //SBC, //E1 DP Indexed Indirect, X 2 6(1,2,4)
-    //SBC, //E3 Stack Relative 2 4(1,4)
-    //SBC, //E5 Direct Page 2 3(1,2,4)
-    //SBC, //E7 DP Indirect Long 2 6(1,2,4)
-    //SBC, //E9 Immediate 2* 2(1,4)
-    //SBC, //ED Absolute 3 4(1,4)
-    //SBC, //EF Absolute Long 4 5(1,4)
-    //SBC, //F1 DP Indirect Indexed, Y 2 5(1,2,3,4)
-    //SBC, //F2 DP Indirect 2 5(1,2,4)
-    //SBC, //F3 SR Indirect Indexed, Y 2 7(1,4)
-    //SBC, //F5 DP Indexed, X 2 4(1,2,4)
-    //SBC, //F7 DP Indirect Long Indexed, Y 2 6(1,2,4)
-    //SBC, //F9 Absolute Indexed, Y 3 4(1,3,4)
-    //SBC, //FD Absolute Indexed, X 3 4(1,3,4)
-    //SBC, //FF Absolute Long Indexed, X 4 5(1,4)
     fn sbc(&mut self, mode: &Instruction) {
     }
 
-    //INX, //E4 Direct Page 2 3(2,10)
-    //INX, //E8 Implied 1 2
     fn inx(&mut self, mode: &Instruction) {
     }
 
-    //NOP, //EA Implied 1 2
     fn nop(&mut self, mode: &Instruction) {
     }
 
-    //XBA, //EB Implied 1 3
     fn xba(&mut self, mode: &Instruction) {
     }
 
-    //BEQ, //F0 Program Counter Relative 2 2(7,8)
     fn beq(&mut self, mode: &Instruction) {
     }
 
-    //PEA, //F4 Stack (absolute) 3 5
     fn pea(&mut self, mode: &Instruction) {
     }
 
-    //SED, //F8 Implied 1 2
     fn sed(&mut self, mode: &Instruction) {
     }
 
-    //PLX, //FA Stack /Pull 1 4(10)
     fn plx(&mut self, mode: &Instruction) {
     }
 
-    //XCE, //FB Implied 1 2
     fn xce(&mut self, mode: &Instruction) {
     }
 }
 
 pub trait Instruction {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16;
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16);
+    fn load(&self, cpu: &mut CPU) -> u16;
+    fn store(&self, cpu: &mut CPU, data: u16);
 }
 
 pub enum InstructionType {
@@ -650,12 +1418,12 @@ pub enum InstructionType {
     ControlTransfer,
 }
 
-struct Absolute;
+struct Absolute { instruction_type: InstructionType }
 impl Instruction for Absolute {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         let pc = cpu.program_counter as usize;
         let bank = {
-            match inst_type {
+            match self.instruction_type {
                 LocatingData    =>    cpu.data_bank as u32,
                 ControlTransfer => cpu.program_bank as u32,
             }
@@ -669,7 +1437,7 @@ impl Instruction for Absolute {
         cpu.memory.get_word(addr as usize)
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
         let pc = cpu.program_counter as usize;
         let high = cpu.memory.get_byte(pc + 1) as u32;
         let low = cpu.memory.get_byte(pc + 2) as u32;
@@ -683,321 +1451,321 @@ impl Instruction for Absolute {
 
 struct AbsoluteIndexedX;
 impl Instruction for AbsoluteIndexedX {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteIndexedY;
 impl Instruction for AbsoluteIndexedY {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteIndexedIndirect;
 impl Instruction for AbsoluteIndexedIndirect {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteIndirect;
 impl Instruction for AbsoluteIndirect {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteIndirectLong;
 impl Instruction for AbsoluteIndirectLong {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteLong;
 impl Instruction for AbsoluteLong {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct AbsoluteLongIndexedX;
 impl Instruction for AbsoluteLongIndexedX {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct Accumulator;
 impl Instruction for Accumulator {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct BlockMove;
 impl Instruction for BlockMove {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPage;
 impl Instruction for DirectPage {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndexedX;
 impl Instruction for DirectPageIndexedX {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndexedY;
 impl Instruction for DirectPageIndexedY {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndexedIndirectX;
 impl Instruction for DirectPageIndexedIndirectX {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndirect;
 impl Instruction for DirectPageIndirect {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndirectLong;
 impl Instruction for DirectPageIndirectLong {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndirectIndexedY;
 impl Instruction for DirectPageIndirectIndexedY {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct DirectPageIndirectLongIndexedY;
 impl Instruction for DirectPageIndirectLongIndexedY {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct Immediate;
 impl Instruction for Immediate {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct Implied;
 impl Instruction for Implied {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct ProgramCounterRelative;
 impl Instruction for ProgramCounterRelative {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct ProgramCounterRelativeLong;
 impl Instruction for ProgramCounterRelativeLong {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackAbsolute;
 impl Instruction for StackAbsolute {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackDirectPageIndirect;
 impl Instruction for StackDirectPageIndirect {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackInterrupt;
 impl Instruction for StackInterrupt {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackProgramCounterRelative;
 impl Instruction for StackProgramCounterRelative {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackPull;
 impl Instruction for StackPull {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackPush;
 impl Instruction for StackPush {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRTI;
 impl Instruction for StackRTI {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRTL;
 impl Instruction for StackRTL {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRTS;
 impl Instruction for StackRTS {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRelative;
 impl Instruction for StackRelative {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 
 struct StackRelativeIndirectIndexedY;
 impl Instruction for StackRelativeIndirectIndexedY {
-    fn load(&self, inst_type: InstructionType, cpu: &mut CPU) -> u16 {
+    fn load(&self, cpu: &mut CPU) -> u16 {
         1_u16
     }
 
-    fn store(&self, inst_type: InstructionType, cpu: &mut CPU, data: u16) {
+    fn store(&self, cpu: &mut CPU, data: u16) {
     }
 }
 

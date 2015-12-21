@@ -66,9 +66,9 @@ fn test_adc_absolute_nc() {
 
     assert_eq!(cpu.check_acc() as usize, 0x8000);
     assert!(cpu.check_flag(NegativeFlag));
-    assert!(!cpu.check_flag(OverflowFlag));
+    assert!(cpu.check_flag(OverflowFlag));
     assert!(!cpu.check_flag(ZeroFlag));
-    assert!(cpu.check_flag(CarryFlag));
+    assert!(!cpu.check_flag(CarryFlag));
 }
 
 #[test]
@@ -92,9 +92,9 @@ fn test_adc_absolute_v() {
 
     assert_eq!(cpu.check_acc() as usize, 0);
     assert!(!cpu.check_flag(NegativeFlag));
-    assert!(cpu.check_flag(OverflowFlag));
+    assert!(!cpu.check_flag(OverflowFlag));
     assert!(!cpu.check_flag(ZeroFlag));
-    assert!(!cpu.check_flag(CarryFlag));
+    assert!(cpu.check_flag(CarryFlag));
 }
 
 #[test]
