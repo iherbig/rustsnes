@@ -1,1033 +1,1034 @@
 use memory::Memory;
 use flags::Flags;
 use flags::Flags::*;
-use self::InstructionType::*;
+use modes::*;
+use modes::InstructionType::*;
 
 macro_rules! decode_op_and_execute {
     ($op:expr, $this:ident) => (
         match $op {
             0x00 => {
-                let mode = StackInterrupt;
-                $this.brk(&mode);
+                let mode = Box::new(StackInterrupt);
+                $this.brk(mode);
             },
             0x01 => {
-                let mode = DirectPageIndexedIndirectX;
-                $this.ora(&mode);
+                let mode = Box::new(DirectPageIndexedIndirectX);
+                $this.ora(mode);
             },
             0x02 => {
-                let mode = StackInterrupt;
-                $this.cop(&mode);
+                let mode = Box::new(StackInterrupt);
+                $this.cop(mode);
             },
             0x03 => {
-                let mode = StackRelative;
-                $this.ora(&mode);
+                let mode = Box::new(StackRelative);
+                $this.ora(mode);
             },
             0x04 => {
-                let mode = DirectPage;
-                $this.tsb(&mode);
+                let mode = Box::new(DirectPage);
+                $this.tsb(mode);
             },
             0x05 => {
-                let mode = DirectPage;
-                $this.ora(&mode);
+                let mode = Box::new(DirectPage);
+                $this.ora(mode);
             },
             0x06 => {
-                let mode = DirectPage;
-                $this.asl(&mode);
+                let mode = Box::new(DirectPage);
+                $this.asl(mode);
             },
             0x07 => {
-                let mode = DirectPageIndirectLong;
-                $this.ora(&mode);
+                let mode = Box::new(DirectPageIndirectLong);
+                $this.ora(mode);
             },
             0x08 => {
-                let mode = StackPush;
-                $this.php(&mode);
+                let mode = Box::new(StackPush);
+                $this.php(mode);
             },
             0x09 => {
-                let mode = Immediate;
-                $this.ora(&mode);
+                let mode = Box::new(Immediate);
+                $this.ora(mode);
             },
             0x0A => {
-                let mode = Accumulator;
-                $this.asl(&mode);
+                let mode = Box::new(Accumulator);
+                $this.asl(mode);
             },
             0x0B => {
-                let mode = StackPush;
-                $this.phd(&mode);
+                let mode = Box::new(StackPush);
+                $this.phd(mode);
             },
             0x0C => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.tsb(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.tsb(mode);
             },
             0x0D => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.ora(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.ora(mode);
             },
             0x0E => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.asl(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.asl(mode);
             },
             0x0F => {
-                let mode = AbsoluteLong;
-                $this.ora(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.ora(mode);
             },
             0x10 => {
-                let mode = ProgramCounterRelative;
-                $this.blp(&mode);
+                let mode = Box::new(ProgramCounterRelative);
+                $this.blp(mode);
             },
             0x11 => {
-                let mode = DirectPageIndirectIndexedY;
-                $this.ora(&mode);
+                let mode = Box::new(DirectPageIndirectIndexedY);
+                $this.ora(mode);
             },
             0x12 => {
-                let mode = DirectPageIndirect;
-                $this.ora(&mode);
+                let mode = Box::new(DirectPageIndirect);
+                $this.ora(mode);
             },
             0x13 => {
-                let mode = StackRelativeIndirectIndexedY;
-                $this.ora(&mode);
+                let mode = Box::new(StackRelativeIndirectIndexedY);
+                $this.ora(mode);
             },
             0x14 => {
-                let mode = DirectPage;
-                $this.trb(&mode);
+                let mode = Box::new(DirectPage);
+                $this.trb(mode);
             },
             0x15 => {
-                let mode = DirectPageIndexedX;
-                $this.ora(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.ora(mode);
             },
             0x16 => {
-                let mode = DirectPageIndexedX;
-                $this.asl(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.asl(mode);
             },
             0x17 => {
-                let mode = DirectPageIndirectLongIndexedY;
-                $this.ora(&mode);
+                let mode = Box::new(DirectPageIndirectLongIndexedY);
+                $this.ora(mode);
             },
             0x18 => {
-                let mode = Implied;
-                $this.clc(&mode);
+                let mode = Box::new(Implied);
+                $this.clc(mode);
             },
             0x19 => {
-                let mode = AbsoluteIndexedY;
-                $this.ora(&mode);
+                let mode = Box::new(AbsoluteIndexedY);
+                $this.ora(mode);
             },
             0x1A => {
-                let mode = Accumulator;
-                $this.inc(&mode);
+                let mode = Box::new(Accumulator);
+                $this.inc(mode);
             },
             0x1B => {
-                let mode = Implied;
-                $this.tcs(&mode);
+                let mode = Box::new(Implied);
+                $this.tcs(mode);
             },
             0x1C => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.trb(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.trb(mode);
             },
             0x1D => {
-                let mode = AbsoluteIndexedX;
-                $this.ora(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.ora(mode);
             },
             0x1E => {
-                let mode = AbsoluteIndexedX;
-                $this.asl(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.asl(mode);
             },
             0x1F => {
-                let mode = AbsoluteLongIndexedX;
-                $this.ora(&mode);
+                let mode = Box::new(AbsoluteLongIndexedX);
+                $this.ora(mode);
             },
             0x20 => {
-                let mode = Absolute { instruction_type: ControlTransfer };
-                $this.jsr(&mode);
+                let mode = Box::new(Absolute { instruction_type: ControlTransfer });
+                $this.jsr(mode);
             },
             0x21 => {
-                let mode = DirectPageIndexedIndirectX;
-                $this.and(&mode);
+                let mode = Box::new(DirectPageIndexedIndirectX);
+                $this.and(mode);
             },
             0x22 => {
-                let mode = AbsoluteLong;
-                $this.jsr(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.jsr(mode);
             },
             0x23 => {
-                let mode = StackRelative;
-                $this.and(&mode);
+                let mode = Box::new(StackRelative);
+                $this.and(mode);
             },
             0x24 => {
-                let mode = DirectPage;
-                $this.bit(&mode);
+                let mode = Box::new(DirectPage);
+                $this.bit(mode);
             },
             0x25 => {
-                let mode = DirectPage;
-                $this.and(&mode);
+                let mode = Box::new(DirectPage);
+                $this.and(mode);
             },
             0x26 => {
-                let mode = DirectPage;
-                $this.rol(&mode);
+                let mode = Box::new(DirectPage);
+                $this.rol(mode);
             },
             0x27 => {
-                let mode = DirectPageIndirectLong;
-                $this.and(&mode);
+                let mode = Box::new(DirectPageIndirectLong);
+                $this.and(mode);
             },
             0x28 => {
-                let mode = StackPull;
-                $this.plp(&mode);
+                let mode = Box::new(StackPull);
+                $this.plp(mode);
             },
             0x29 => {
-                let mode = Immediate;
-                $this.and(&mode);
+                let mode = Box::new(Immediate);
+                $this.and(mode);
             },
             0x2A => {
-                let mode = Accumulator;
-                $this.rol(&mode);
+                let mode = Box::new(Accumulator);
+                $this.rol(mode);
             },
             0x2B => {
-                let mode = StackPull;
-                $this.pld(&mode);
+                let mode = Box::new(StackPull);
+                $this.pld(mode);
             },
             0x2C => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.bit(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.bit(mode);
             },
             0x2D => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.and(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.and(mode);
             },
             0x2E => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.rol(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.rol(mode);
             },
             0x2F => {
-                let mode = AbsoluteLong;
-                $this.and(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.and(mode);
             },
             0x30 => {
-                let mode = ProgramCounterRelative;
-                $this.bmi(&mode);
+                let mode = Box::new(ProgramCounterRelative);
+                $this.bmi(mode);
             },
             0x31 => {
-                let mode = DirectPageIndirectIndexedY;
-                $this.and(&mode);
+                let mode = Box::new(DirectPageIndirectIndexedY);
+                $this.and(mode);
             },
             0x32 => {
-                let mode = DirectPageIndirect;
-                $this.and(&mode);
+                let mode = Box::new(DirectPageIndirect);
+                $this.and(mode);
             },
             0x33 => {
-                let mode = StackRelativeIndirectIndexedY;
-                $this.and(&mode);
+                let mode = Box::new(StackRelativeIndirectIndexedY);
+                $this.and(mode);
             },
             0x34 => {
-                let mode = DirectPageIndexedX;
-                $this.bit(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.bit(mode);
             },
             0x35 => {
-                let mode = DirectPageIndexedX;
-                $this.and(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.and(mode);
             },
             0x36 => {
-                let mode = DirectPageIndexedX;
-                $this.rol(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.rol(mode);
             },
             0x37 => {
-                let mode = DirectPageIndirectLongIndexedY;
-                $this.and(&mode);
+                let mode = Box::new(DirectPageIndirectLongIndexedY);
+                $this.and(mode);
             },
             0x38 => {
-                let mode = Implied;
-                $this.sec(&mode);
+                let mode = Box::new(Implied);
+                $this.sec(mode);
             },
             0x39 => {
-                let mode = AbsoluteIndexedY;
-                $this.and(&mode);
+                let mode = Box::new(AbsoluteIndexedY);
+                $this.and(mode);
             },
             0x3A => {
-                let mode = Accumulator;
-                $this.dec(&mode);
+                let mode = Box::new(Accumulator);
+                $this.dec(mode);
             },
             0x3B => {
-                let mode = Implied;
-                $this.tsc(&mode);
+                let mode = Box::new(Implied);
+                $this.tsc(mode);
             },
             0x3C => {
-                let mode = AbsoluteIndexedX;
-                $this.bit(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.bit(mode);
             },
             0x3D => {
-                let mode = AbsoluteIndexedX;
-                $this.and(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.and(mode);
             },
             0x3E => {
-                let mode = AbsoluteIndexedX;
-                $this.rol(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.rol(mode);
             },
             0x3F => {
-                let mode = AbsoluteLongIndexedX;
-                $this.and(&mode);
+                let mode = Box::new(AbsoluteLongIndexedX);
+                $this.and(mode);
             },
             0x40 => {
-                let mode = StackRTI;
-                $this.rti(&mode);
+                let mode = Box::new(StackRTI);
+                $this.rti(mode);
             },
             0x41 => {
-                let mode = DirectPageIndexedIndirectX;
-                $this.eor(&mode);
+                let mode = Box::new(DirectPageIndexedIndirectX);
+                $this.eor(mode);
             },
             0x42 => {
                 $this.wdm();
             },
             0x43 => {
-                let mode = StackRelative;
-                $this.eor(&mode);
+                let mode = Box::new(StackRelative);
+                $this.eor(mode);
             },
             0x44 => {
-                let mode = BlockMove;
-                $this.mvp(&mode);
+                let mode = Box::new(BlockMove);
+                $this.mvp(mode);
             },
             0x45 => {
-                let mode = DirectPage;
-                $this.eor(&mode);
+                let mode = Box::new(DirectPage);
+                $this.eor(mode);
             },
             0x46 => {
-                let mode = DirectPage;
-                $this.lsr(&mode);
+                let mode = Box::new(DirectPage);
+                $this.lsr(mode);
             },
             0x47 => {
-                let mode = DirectPageIndirectLong;
-                $this.eor(&mode);
+                let mode = Box::new(DirectPageIndirectLong);
+                $this.eor(mode);
             },
             0x48 => {
-                let mode = StackPush;
-                $this.pha(&mode);
+                let mode = Box::new(StackPush);
+                $this.pha(mode);
             },
             0x49 => {
-                let mode = Immediate;
-                $this.eor(&mode);
+                let mode = Box::new(Immediate);
+                $this.eor(mode);
             },
             0x4A => {
-                let mode = Accumulator;
-                $this.lsr(&mode);
+                let mode = Box::new(Accumulator);
+                $this.lsr(mode);
             },
             0x4B => {
-                let mode = StackPush;
-                $this.phk(&mode);
+                let mode = Box::new(StackPush);
+                $this.phk(mode);
             },
             0x4C => {
-                let mode = Absolute { instruction_type: ControlTransfer };
-                $this.jmp(&mode);
+                let mode = Box::new(Absolute { instruction_type: ControlTransfer });
+                $this.jmp(mode);
             },
             0x4D => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.eor(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.eor(mode);
             },
             0x4E => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.lsr(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.lsr(mode);
             },
             0x4F => {
-                let mode = AbsoluteLong;
-                $this.eor(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.eor(mode);
             },
             0x50 => {
-                let mode = ProgramCounterRelative;
-                $this.bvc(&mode);
+                let mode = Box::new(ProgramCounterRelative);
+                $this.bvc(mode);
             },
             0x51 => {
-                let mode = DirectPageIndirectIndexedY;
-                $this.eor(&mode);
+                let mode = Box::new(DirectPageIndirectIndexedY);
+                $this.eor(mode);
             },
             0x52 => {
-                let mode = DirectPageIndirect;
-                $this.eor(&mode);
+                let mode = Box::new(DirectPageIndirect);
+                $this.eor(mode);
             },
             0x53 => {
-                let mode = StackRelativeIndirectIndexedY;
-                $this.eor(&mode);
+                let mode = Box::new(StackRelativeIndirectIndexedY);
+                $this.eor(mode);
             },
             0x54 => {
-                let mode = BlockMove;
-                $this.mvn(&mode);
+                let mode = Box::new(BlockMove);
+                $this.mvn(mode);
             },
             0x55 => {
-                let mode = DirectPageIndexedX;
-                $this.eor(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.eor(mode);
             },
             0x56 => {
-                let mode = DirectPageIndexedX;
-                $this.lsr(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.lsr(mode);
             },
             0x57 => {
-                let mode = DirectPageIndirectLongIndexedY;
-                $this.eor(&mode);
+                let mode = Box::new(DirectPageIndirectLongIndexedY);
+                $this.eor(mode);
             },
             0x58 => {
-                let mode = Implied;
-                $this.cli(&mode);
+                let mode = Box::new(Implied);
+                $this.cli(mode);
             },
             0x59 => {
-                let mode = AbsoluteIndexedY;
-                $this.eor(&mode);
+                let mode = Box::new(AbsoluteIndexedY);
+                $this.eor(mode);
             },
             0x5A => {
-                let mode = StackPush;
-                $this.phy(&mode);
+                let mode = Box::new(StackPush);
+                $this.phy(mode);
             },
             0x5B => {
-                let mode = Implied;
-                $this.tcd(&mode);
+                let mode = Box::new(Implied);
+                $this.tcd(mode);
             },
             0x5C => {
-                let mode = AbsoluteLong;
-                $this.jmp(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.jmp(mode);
             },
             0x5D => {
-                let mode = AbsoluteIndexedX;
-                $this.eor(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.eor(mode);
             },
             0x5E => {
-                let mode = AbsoluteIndexedX;
-                $this.lsr(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.lsr(mode);
             },
             0x5F => {
-                let mode = AbsoluteLongIndexedX;
-                $this.eor(&mode);
+                let mode = Box::new(AbsoluteLongIndexedX);
+                $this.eor(mode);
             },
             0x60 => {
-                let mode = StackRTS;
-                $this.rts(&mode);
+                let mode = Box::new(StackRTS);
+                $this.rts(mode);
             },
             0x61 => {
-                let mode = DirectPageIndexedIndirectX;
-                $this.adc(&mode);
+                let mode = Box::new(DirectPageIndexedIndirectX);
+                $this.adc(mode);
             },
             0x62 => {
-                let mode = StackProgramCounterRelative;
-                $this.per(&mode);
+                let mode = Box::new(StackProgramCounterRelative);
+                $this.per(mode);
             },
             0x63 => {
-                let mode = StackRelative;
-                $this.adc(&mode);
+                let mode = Box::new(StackRelative);
+                $this.adc(mode);
             },
             0x64 => {
-                let mode = DirectPage;
-                $this.stz(&mode);
+                let mode = Box::new(DirectPage);
+                $this.stz(mode);
             },
             0x65 => {
-                let mode = DirectPage;
-                $this.adc(&mode);
+                let mode = Box::new(DirectPage);
+                $this.adc(mode);
             },
             0x66 => {
-                let mode = DirectPage;
-                $this.ror(&mode);
+                let mode = Box::new(DirectPage);
+                $this.ror(mode);
             },
             0x67 => {
-                let mode = DirectPageIndirectLong;
-                $this.adc(&mode);
+                let mode = Box::new(DirectPageIndirectLong);
+                $this.adc(mode);
             },
             0x68 => {
-                let mode = StackPull;
-                $this.pla(&mode);
+                let mode = Box::new(StackPull);
+                $this.pla(mode);
             },
             0x69 => {
-                let mode = Immediate;
-                $this.adc(&mode);
+                let mode = Box::new(Immediate);
+                $this.adc(mode);
             },
             0x6A => {
-                let mode = Accumulator;
-                $this.ror(&mode);
+                let mode = Box::new(Accumulator);
+                $this.ror(mode);
             },
             0x6B => {
-                let mode = StackRTL;
-                $this.rtl(&mode);
+                let mode = Box::new(StackRTL);
+                $this.rtl(mode);
             },
             0x6C => {
-                let mode = AbsoluteIndirect;
-                $this.jmp(&mode);
+                let mode = Box::new(AbsoluteIndirect);
+                $this.jmp(mode);
             },
             0x6D => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.adc(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.adc(mode);
             },
             0x6E => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.ror(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.ror(mode);
             },
             0x6F => {
-                let mode = AbsoluteLong;
-                $this.adc(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.adc(mode);
             },
             0x70 => {
-                let mode = ProgramCounterRelative;
-                $this.bvs(&mode);
+                let mode = Box::new(ProgramCounterRelative);
+                $this.bvs(mode);
             },
             0x71 => {
-                let mode = DirectPageIndirectIndexedY;
-                $this.adc(&mode);
+                let mode = Box::new(DirectPageIndirectIndexedY);
+                $this.adc(mode);
             },
             0x72 => {
-                let mode = DirectPageIndirect;
-                $this.adc(&mode);
+                let mode = Box::new(DirectPageIndirect);
+                $this.adc(mode);
             },
             0x73 => {
-                let mode = StackRelativeIndirectIndexedY;
-                $this.adc(&mode);
+                let mode = Box::new(StackRelativeIndirectIndexedY);
+                $this.adc(mode);
             },
             0x74 => {
-                let mode = StackRelativeIndirectIndexedY;
-                $this.stz(&mode);
+                let mode = Box::new(StackRelativeIndirectIndexedY);
+                $this.stz(mode);
             },
             0x75 => {
-                let mode = DirectPageIndexedX;
-                $this.adc(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.adc(mode);
             },
             0x76 => {
-                let mode = DirectPageIndexedX;
-                $this.ror(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.ror(mode);
             },
             0x77 => {
-                let mode = DirectPageIndirectLongIndexedY;
-                $this.adc(&mode);
+                let mode = Box::new(DirectPageIndirectLongIndexedY);
+                $this.adc(mode);
             },
             0x78 => {
-                let mode = Implied;
-                $this.sei(&mode);
+                let mode = Box::new(Implied);
+                $this.sei(mode);
             },
             0x79 => {
-                let mode = AbsoluteIndexedY;
-                $this.adc(&mode);
+                let mode = Box::new(AbsoluteIndexedY);
+                $this.adc(mode);
             },
             0x7A => {
-                let mode = StackPull;
-                $this.ply(&mode);
+                let mode = Box::new(StackPull);
+                $this.ply(mode);
             },
             0x7B => {
-                let mode = Implied;
-                $this.tdc(&mode);
+                let mode = Box::new(Implied);
+                $this.tdc(mode);
             },
             0x7C => {
-                let mode = AbsoluteIndexedIndirect;
-                $this.jmp(&mode);
+                let mode = Box::new(AbsoluteIndexedIndirect);
+                $this.jmp(mode);
             },
             0x7D => {
-                let mode = AbsoluteIndexedX;
-                $this.adc(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.adc(mode);
             },
             0x7E => {
-                let mode = AbsoluteIndexedX;
-                $this.ror(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.ror(mode);
             },
             0x7F => {
-                let mode = AbsoluteLongIndexedX;
-                $this.adc(&mode);
+                let mode = Box::new(AbsoluteLongIndexedX);
+                $this.adc(mode);
             },
             0x80 => {
-                let mode = ProgramCounterRelative;
-                $this.bra(&mode);
+                let mode = Box::new(ProgramCounterRelative);
+                $this.bra(mode);
             },
             0x81 => {
-                let mode = DirectPageIndexedIndirectX;
-                $this.sta(&mode);
+                let mode = Box::new(DirectPageIndexedIndirectX);
+                $this.sta(mode);
             },
             0x82 => {
-                let mode = ProgramCounterRelativeLong;
-                $this.brl(&mode);
+                let mode = Box::new(ProgramCounterRelativeLong);
+                $this.brl(mode);
             },
             0x83 => {
-                let mode = StackRelative;
-                $this.sta(&mode);
+                let mode = Box::new(StackRelative);
+                $this.sta(mode);
             },
             0x84 => {
-                let mode = DirectPage;
-                $this.sty(&mode);
+                let mode = Box::new(DirectPage);
+                $this.sty(mode);
             },
             0x85 => {
-                let mode = DirectPage;
-                $this.sta(&mode);
+                let mode = Box::new(DirectPage);
+                $this.sta(mode);
             },
             0x86 => {
-                let mode = DirectPage;
-                $this.stx(&mode);
+                let mode = Box::new(DirectPage);
+                $this.stx(mode);
             },
             0x87 => {
-                let mode = DirectPageIndirectLong;
-                $this.sta(&mode);
+                let mode = Box::new(DirectPageIndirectLong);
+                $this.sta(mode);
             },
             0x88 => {
-                let mode = Implied;
-                $this.dey(&mode);
+                let mode = Box::new(Implied);
+                $this.dey(mode);
             },
             0x89 => {
-                let mode = Immediate;
-                $this.bit(&mode);
+                let mode = Box::new(Immediate);
+                $this.bit(mode);
             },
             0x8A => {
-                let mode = Implied;
-                $this.txa(&mode);
+                let mode = Box::new(Implied);
+                $this.txa(mode);
             },
             0x8B => {
-                let mode = StackPush;
-                $this.phb(&mode);
+                let mode = Box::new(StackPush);
+                $this.phb(mode);
             },
             0x8C => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.sty(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.sty(mode);
             },
             0x8D => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.sta(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.sta(mode);
             },
             0x8E => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.stx(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.stx(mode);
             },
             0x8F => {
-                let mode = AbsoluteLong;
-                $this.sta(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.sta(mode);
             },
             0x90 => {
-                let mode = ProgramCounterRelative;
-                $this.bcc(&mode);
+                let mode = Box::new(ProgramCounterRelative);
+                $this.bcc(mode);
             },
             0x91 => {
-                let mode = DirectPageIndirectIndexedY;
-                $this.sta(&mode);
+                let mode = Box::new(DirectPageIndirectIndexedY);
+                $this.sta(mode);
             },
             0x92 => {
-                let mode = DirectPageIndirect;
-                $this.sta(&mode);
+                let mode = Box::new(DirectPageIndirect);
+                $this.sta(mode);
             },
             0x93 => {
-                let mode = StackRelativeIndirectIndexedY;
-                $this.sta(&mode);
+                let mode = Box::new(StackRelativeIndirectIndexedY);
+                $this.sta(mode);
             },
             0x94 => {
-                let mode = DirectPageIndexedX;
-                $this.sty(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.sty(mode);
             },
             0x95 => {
-                let mode = DirectPageIndexedX;
-                $this.sta(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.sta(mode);
             },
             0x96 => {
-                let mode = DirectPageIndexedY;
-                $this.stx(&mode);
+                let mode = Box::new(DirectPageIndexedY);
+                $this.stx(mode);
             },
             0x97 => {
-                let mode = DirectPageIndirectLongIndexedY;
-                $this.sta(&mode);
+                let mode = Box::new(DirectPageIndirectLongIndexedY);
+                $this.sta(mode);
             },
             0x98 => {
-                let mode = Implied;
-                $this.tya(&mode);
+                let mode = Box::new(Implied);
+                $this.tya(mode);
             },
             0x99 => {
-                let mode = AbsoluteIndexedY;
-                $this.sta(&mode);
+                let mode = Box::new(AbsoluteIndexedY);
+                $this.sta(mode);
             },
             0x9A => {
-                let mode = Implied;
-                $this.txs(&mode);
+                let mode = Box::new(Implied);
+                $this.txs(mode);
             },
             0x9B => {
-                let mode = Implied;
-                $this.txy(&mode);
+                let mode = Box::new(Implied);
+                $this.txy(mode);
             },
             0x9C => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.stz(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.stz(mode);
             },
             0x9D => {
-                let mode = AbsoluteIndexedX;
-                $this.sta(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.sta(mode);
             },
             0x9E => {
-                let mode = AbsoluteIndexedX;
-                $this.stz(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.stz(mode);
             },
             0x9F => {
-                let mode = AbsoluteLongIndexedX;
-                $this.sta(&mode);
+                let mode = Box::new(AbsoluteLongIndexedX);
+                $this.sta(mode);
             },
             0xA0 => {
-                let mode = Immediate;
-                $this.ldy(&mode);
+                let mode = Box::new(Immediate);
+                $this.ldy(mode);
             },
             0xA1 => {
-                let mode = DirectPageIndexedIndirectX;
-                $this.lda(&mode);
+                let mode = Box::new(DirectPageIndexedIndirectX);
+                $this.lda(mode);
             },
             0xA2 => {
-                let mode = Immediate;
-                $this.ldx(&mode);
+                let mode = Box::new(Immediate);
+                $this.ldx(mode);
             },
             0xA3 => {
-                let mode = StackRelative;
-                $this.lda(&mode);
+                let mode = Box::new(StackRelative);
+                $this.lda(mode);
             },
             0xA4 => {
-                let mode = DirectPage;
-                $this.ldy(&mode);
+                let mode = Box::new(DirectPage);
+                $this.ldy(mode);
             },
             0xA5 => {
-                let mode = DirectPage;
-                $this.lda(&mode);
+                let mode = Box::new(DirectPage);
+                $this.lda(mode);
             },
             0xA6 => {
-                let mode = DirectPage;
-                $this.ldx(&mode);
+                let mode = Box::new(DirectPage);
+                $this.ldx(mode);
             },
             0xA7 => {
-                let mode = DirectPageIndirectLong;
-                $this.lda(&mode);
+                let mode = Box::new(DirectPageIndirectLong);
+                $this.lda(mode);
             },
             0xA8 => {
-                let mode = Implied;
-                $this.tay(&mode);
+                let mode = Box::new(Implied);
+                $this.tay(mode);
             },
             0xA9 => {
-                let mode = Immediate;
-                $this.lda(&mode);
+                let mode = Box::new(Immediate);
+                $this.lda(mode);
             },
             0xAA => {
-                let mode = Implied;
-                $this.tax(&mode);
+                let mode = Box::new(Implied);
+                $this.tax(mode);
             },
             0xAB => {
-                let mode = StackPull;
-                $this.plb(&mode);
+                let mode = Box::new(StackPull);
+                $this.plb(mode);
             },
             0xAC => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.ldy(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.ldy(mode);
             },
             0xAD => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.lda(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.lda(mode);
             },
             0xAE => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.ldx(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.ldx(mode);
             },
             0xAF => {
-                let mode = AbsoluteLong;
-                $this.lda(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.lda(mode);
             },
             0xB0 => {
-                let mode = ProgramCounterRelative;
-                $this.bcs(&mode);
+                let mode = Box::new(ProgramCounterRelative);
+                $this.bcs(mode);
             },
             0xB1 => {
-                let mode = DirectPageIndirectIndexedY;
-                $this.lda(&mode);
+                let mode = Box::new(DirectPageIndirectIndexedY);
+                $this.lda(mode);
             },
             0xB2 => {
-                let mode = DirectPageIndirect;
-                $this.lda(&mode);
+                let mode = Box::new(DirectPageIndirect);
+                $this.lda(mode);
             },
             0xB3 => {
-                let mode = StackRelativeIndirectIndexedY;
-                $this.lda(&mode);
+                let mode = Box::new(StackRelativeIndirectIndexedY);
+                $this.lda(mode);
             },
             0xB4 => {
-                let mode = DirectPageIndexedX;
-                $this.ldy(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.ldy(mode);
             },
             0xB5 => {
-                let mode = DirectPageIndexedX;
-                $this.lda(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.lda(mode);
             },
             0xB6 => {
-                let mode = DirectPageIndexedY;
-                $this.ldx(&mode);
+                let mode = Box::new(DirectPageIndexedY);
+                $this.ldx(mode);
             },
             0xB7 => {
-                let mode = DirectPageIndirectLongIndexedY;
-                $this.lda(&mode);
+                let mode = Box::new(DirectPageIndirectLongIndexedY);
+                $this.lda(mode);
             },
             0xB8 => {
-                let mode = Implied;
-                $this.clv(&mode);
+                let mode = Box::new(Implied);
+                $this.clv(mode);
             },
             0xB9 => {
-                let mode = AbsoluteIndexedY;
-                $this.lda(&mode);
+                let mode = Box::new(AbsoluteIndexedY);
+                $this.lda(mode);
             },
             0xBA => {
-                let mode = Implied;
-                $this.tsx(&mode);
+                let mode = Box::new(Implied);
+                $this.tsx(mode);
             },
             0xBB => {
-                let mode = Implied;
-                $this.tyx(&mode);
+                let mode = Box::new(Implied);
+                $this.tyx(mode);
             },
             0xBC => {
-                let mode = AbsoluteIndexedX;
-                $this.ldy(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.ldy(mode);
             },
             0xBD => {
-                let mode = AbsoluteIndexedX;
-                $this.lda(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.lda(mode);
             },
             0xBE => {
-                let mode = AbsoluteIndexedY;
-                $this.ldx(&mode);
+                let mode = Box::new(AbsoluteIndexedY);
+                $this.ldx(mode);
             },
             0xBF => {
-                let mode = AbsoluteLongIndexedX;
-                $this.lda(&mode);
+                let mode = Box::new(AbsoluteLongIndexedX);
+                $this.lda(mode);
             },
             0xC0 => {
-                let mode = Immediate;
-                $this.cpy(&mode);
+                let mode = Box::new(Immediate);
+                $this.cpy(mode);
             },
             0xC1 => {
-                let mode = DirectPageIndexedIndirectX;
-                $this.cmp(&mode);
+                let mode = Box::new(DirectPageIndexedIndirectX);
+                $this.cmp(mode);
             },
             0xC2 => {
-                let mode = Immediate;
-                $this.rep(&mode);
+                let mode = Box::new(Immediate);
+                $this.rep(mode);
             },
             0xC3 => {
-                let mode = StackRelative;
-                $this.cmp(&mode);
+                let mode = Box::new(StackRelative);
+                $this.cmp(mode);
             },
             0xC4 => {
-                let mode = DirectPage;
-                $this.cpy(&mode);
+                let mode = Box::new(DirectPage);
+                $this.cpy(mode);
             },
             0xC5 => {
-                let mode = DirectPage;
-                $this.cmp(&mode);
+                let mode = Box::new(DirectPage);
+                $this.cmp(mode);
             },
             0xC6 => {
-                let mode = DirectPage;
-                $this.dec(&mode);
+                let mode = Box::new(DirectPage);
+                $this.dec(mode);
             },
             0xC7 => {
-                let mode = DirectPageIndirectLong;
-                $this.cmp(&mode);
+                let mode = Box::new(DirectPageIndirectLong);
+                $this.cmp(mode);
             },
             0xC8 => {
-                let mode = Implied;
-                $this.iny(&mode);
+                let mode = Box::new(Implied);
+                $this.iny(mode);
             },
             0xC9 => {
-                let mode = Immediate;
-                $this.cmp(&mode);
+                let mode = Box::new(Immediate);
+                $this.cmp(mode);
             },
             0xCA => {
-                let mode = Implied;
-                $this.dex(&mode);
+                let mode = Box::new(Implied);
+                $this.dex(mode);
             },
             0xCB => {
-                let mode = Implied;
-                $this.wai(&mode);
+                let mode = Box::new(Implied);
+                $this.wai(mode);
             },
             0xCC => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.cpy(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.cpy(mode);
             },
             0xCD => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.cmp(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.cmp(mode);
             },
             0xCE => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.dec(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.dec(mode);
             },
             0xCF => {
-                let mode = AbsoluteLong;
-                $this.cmp(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.cmp(mode);
             },
             0xD0 => {
-                let mode = ProgramCounterRelative;
-                $this.bne(&mode);
+                let mode = Box::new(ProgramCounterRelative);
+                $this.bne(mode);
             },
             0xD1 => {
-                let mode = DirectPageIndirectIndexedY;
-                $this.cmp(&mode);
+                let mode = Box::new(DirectPageIndirectIndexedY);
+                $this.cmp(mode);
             },
             0xD2 => {
-                let mode = DirectPageIndirect;
-                $this.cmp(&mode);
+                let mode = Box::new(DirectPageIndirect);
+                $this.cmp(mode);
             },
             0xD3 => {
-                let mode = StackRelativeIndirectIndexedY;
-                $this.cmp(&mode);
+                let mode = Box::new(StackRelativeIndirectIndexedY);
+                $this.cmp(mode);
             },
             0xD4 => {
-                let mode = StackDirectPageIndirect;
-                $this.pei(&mode);
+                let mode = Box::new(StackDirectPageIndirect);
+                $this.pei(mode);
             },
             0xD5 => {
-                let mode = DirectPageIndexedX;
-                $this.cmp(&mode)
+                let mode = Box::new(DirectPageIndexedX);
+                $this.cmp(mode)
             },
             0xD6 => {
-                let mode = DirectPageIndexedX;
-                $this.dec(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.dec(mode);
             },
             0xD7 => {
-                let mode = DirectPageIndirectLongIndexedY;
-                $this.cmp(&mode);
+                let mode = Box::new(DirectPageIndirectLongIndexedY);
+                $this.cmp(mode);
             },
             0xD8 => {
-                let mode = Implied;
-                $this.cld(&mode);
+                let mode = Box::new(Implied);
+                $this.cld(mode);
             },
             0xD9 => {
-                let mode = AbsoluteIndexedY;
-                $this.cmp(&mode);
+                let mode = Box::new(AbsoluteIndexedY);
+                $this.cmp(mode);
             },
             0xDA => {
-                let mode = StackPush;
-                $this.phx(&mode);
+                let mode = Box::new(StackPush);
+                $this.phx(mode);
             },
             0xDB => {
-                let mode = Implied;
-                $this.stp(&mode);
+                let mode = Box::new(Implied);
+                $this.stp(mode);
             },
             0xDC => {
-                let mode = AbsoluteIndirectLong;
-                $this.jmp(&mode);
+                let mode = Box::new(AbsoluteIndirectLong);
+                $this.jmp(mode);
             },
             0xDD => {
-                let mode = AbsoluteIndexedX;
-                $this.cmp(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.cmp(mode);
             },
             0xDE => {
-                let mode = AbsoluteIndexedX;
-                $this.dec(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.dec(mode);
             },
             0xDF => {
-                let mode = AbsoluteLongIndexedX;
-                $this.cmp(&mode);
+                let mode = Box::new(AbsoluteLongIndexedX);
+                $this.cmp(mode);
             },
             0xE0 => {
-                let mode = Immediate;
-                $this.cpx(&mode);
+                let mode = Box::new(Immediate);
+                $this.cpx(mode);
             },
             0xE1 => {
-                let mode = DirectPageIndexedIndirectX;
-                $this.sbc(&mode);
+                let mode = Box::new(DirectPageIndexedIndirectX);
+                $this.sbc(mode);
             },
             0xE2 => {
-                let mode = Immediate;
-                $this.cpx(&mode);
+                let mode = Box::new(Immediate);
+                $this.cpx(mode);
             },
             0xE3 => {
-                let mode = DirectPage;
-                $this.sbc(&mode);
+                let mode = Box::new(DirectPage);
+                $this.sbc(mode);
             },
             0xE4 => {
-                let mode = DirectPage;
-                $this.inx(&mode);
+                let mode = Box::new(DirectPage);
+                $this.inx(mode);
             },
             0xE5 => {
-                let mode = DirectPage;
-                $this.sbc(&mode);
+                let mode = Box::new(DirectPage);
+                $this.sbc(mode);
             },
             0xE6 => {
-                let mode = DirectPage;
-                $this.inc(&mode);
+                let mode = Box::new(DirectPage);
+                $this.inc(mode);
             },
             0xE7 => {
-                let mode = DirectPageIndirectLong;
-                $this.sbc(&mode);
+                let mode = Box::new(DirectPageIndirectLong);
+                $this.sbc(mode);
             },
             0xE8 => {
-                let mode = Implied;
-                $this.inx(&mode);
+                let mode = Box::new(Implied);
+                $this.inx(mode);
             },
             0xE9 => {
-                let mode = Immediate;
-                $this.sbc(&mode);
+                let mode = Box::new(Immediate);
+                $this.sbc(mode);
             },
             0xEA => {
-                let mode = Implied;
-                $this.nop(&mode);
+                let mode = Box::new(Implied);
+                $this.nop(mode);
             },
             0xEB => {
-                let mode = Implied;
-                $this.xba(&mode);
+                let mode = Box::new(Implied);
+                $this.xba(mode);
             },
             0xEC => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.cpx(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.cpx(mode);
             },
             0xED => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.sbc(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.sbc(mode);
             },
             0xEE => {
-                let mode = Absolute { instruction_type: LocatingData };
-                $this.inc(&mode);
+                let mode = Box::new(Absolute { instruction_type: LocatingData });
+                $this.inc(mode);
             },
             0xEF => {
-                let mode = AbsoluteLong;
-                $this.sbc(&mode);
+                let mode = Box::new(AbsoluteLong);
+                $this.sbc(mode);
             },
             0xF0 => {
-                let mode = ProgramCounterRelative;
-                $this.beq(&mode);
+                let mode = Box::new(ProgramCounterRelative);
+                $this.beq(mode);
             },
             0xF1 => {
-                let mode = DirectPageIndirectIndexedY;
-                $this.sbc(&mode);
+                let mode = Box::new(DirectPageIndirectIndexedY);
+                $this.sbc(mode);
             },
             0xF2 => {
-                let mode = DirectPageIndirect;
-                $this.sbc(&mode);
+                let mode = Box::new(DirectPageIndirect);
+                $this.sbc(mode);
             },
             0xF3 => {
-                let mode = StackRelativeIndirectIndexedY;
-                $this.sbc(&mode);
+                let mode = Box::new(StackRelativeIndirectIndexedY);
+                $this.sbc(mode);
             },
             0xF4 => {
-                let mode = StackAbsolute;
-                $this.pea(&mode);
+                let mode = Box::new(StackAbsolute);
+                $this.pea(mode);
             },
             0xF5 => {
-                let mode = DirectPageIndexedX;
-                $this.sbc(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.sbc(mode);
             },
             0xF6 => {
-                let mode = DirectPageIndexedX;
-                $this.inc(&mode);
+                let mode = Box::new(DirectPageIndexedX);
+                $this.inc(mode);
             },
             0xF7 => {
-                let mode = DirectPageIndirectLongIndexedY;
-                $this.sbc(&mode);
+                let mode = Box::new(DirectPageIndirectLongIndexedY);
+                $this.sbc(mode);
             },
             0xF8 => {
-                let mode = Implied;
-                $this.sed(&mode);
+                let mode = Box::new(Implied);
+                $this.sed(mode);
             },
             0xF9 => {
-                let mode = AbsoluteIndexedY;
-                $this.sbc(&mode);
+                let mode = Box::new(AbsoluteIndexedY);
+                $this.sbc(mode);
             },
             0xFA => {
-                let mode = StackPull;
-                $this.plx(&mode);
+                let mode = Box::new(StackPull);
+                $this.plx(mode);
             },
             0xFB => {
-                let mode = Implied;
-                $this.xce(&mode);
+                let mode = Box::new(Implied);
+                $this.xce(mode);
             },
             0xFC => {
-                let mode = AbsoluteIndexedIndirect;
-                $this.jsr(&mode);
+                let mode = Box::new(AbsoluteIndexedIndirect);
+                $this.jsr(mode);
             },
             0xFD => {
-                let mode = AbsoluteIndexedX;
-                $this.sbc(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.sbc(mode);
             },
             0xFE => {
-                let mode = AbsoluteIndexedX;
-                $this.inc(&mode);
+                let mode = Box::new(AbsoluteIndexedX);
+                $this.inc(mode);
             },
             0xFF => {
-                let mode = AbsoluteLongIndexedX;
-                $this.sbc(&mode);
+                let mode = Box::new(AbsoluteLongIndexedX);
+                $this.sbc(mode);
             },
             _ => panic!("{} is not an opcode", $op),
         }
@@ -1035,17 +1036,17 @@ macro_rules! decode_op_and_execute {
 }
 
 pub struct CPU {
-    accumulator:      u16,
-    index_x:          u16,
-    index_y:          u16,
-    stack_pointer:    u16,
-    data_bank:         u8,
-    direct_page:      u16,
-    program_bank:      u8,
-    processor_status:  u8,
-    program_counter:  u16,
-    emulation_mode:    u8,
-    pub memory:    Memory,
+    accumulator:          u16,
+    index_x:              u16,
+    index_y:              u16,
+    stack_pointer:        u16,
+    pub data_bank:         u8,
+    pub direct_page:      u16,
+    pub program_bank:      u8,
+    pub processor_status:  u8,
+    pub program_counter:  u16,
+    emulation_mode:        u8,
+    pub memory:        Memory,
 }
 
 impl CPU {
@@ -1112,117 +1113,115 @@ impl CPU {
 		}
 	}
 
-    fn brk(&mut self, mode: &Instruction) {
+    fn brk<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn ora(&mut self, mode: &Instruction) {
+    fn ora<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn cop(&mut self, mode: &Instruction) {
+    fn cop<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tsb(&mut self, mode: &Instruction) {
+    fn tsb<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn asl(&mut self, mode: &Instruction) {
+    fn asl<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn php(&mut self, mode: &Instruction) {
+    fn php<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn phd(&mut self, mode: &Instruction) {
+    fn phd<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn blp(&mut self, mode: &Instruction) {
+    fn blp<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn trb(&mut self, mode: &Instruction) {
+    fn trb<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn clc(&mut self, mode: &Instruction) {
+    fn clc<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn inc(&mut self, mode: &Instruction) {
+    fn inc<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tcs(&mut self, mode: &Instruction) {
+    fn tcs<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn jsr(&mut self, mode: &Instruction) {
+    fn jsr<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn and(&mut self, mode: &Instruction) {
+    fn and<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn bit(&mut self, mode: &Instruction) {
+    fn bit<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn rol(&mut self, mode: &Instruction) {
+    fn rol<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn plp(&mut self, mode: &Instruction) {
+    fn plp<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn pld(&mut self, mode: &Instruction) {
+    fn pld<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn bmi(&mut self, mode: &Instruction) {
+    fn bmi<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn sec(&mut self, mode: &Instruction) {
+    fn sec<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn dec(&mut self, mode: &Instruction) {
+    fn dec<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tsc(&mut self, mode: &Instruction) {
+    fn tsc<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn rti(&mut self, mode: &Instruction) {
+    fn rti<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn eor(&mut self, mode: &Instruction) {
+    fn eor<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
     fn wdm(&mut self) {
     }
 
-    fn mvp(&mut self, mode: &Instruction) {
+    fn mvp<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn lsr(&mut self, mode: &Instruction) {
+    fn lsr<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn pha(&mut self, mode: &Instruction) {
+    fn pha<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn phk(&mut self, mode: &Instruction) {
+    fn phk<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn jmp(&mut self, mode: &Instruction) {
+    fn jmp<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn bvc(&mut self, mode: &Instruction) {
+    fn bvc<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn mvn(&mut self, mode: &Instruction) {
+    fn mvn<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn cli(&mut self, mode: &Instruction) {
+    fn cli<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn phy(&mut self, mode: &Instruction) {
+    fn phy<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tcd(&mut self, mode: &Instruction) {
+    fn tcd<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn rts(&mut self, mode: &Instruction) {
+    fn rts<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn adc(&mut self, mode: &Instruction) {
-        use self::Instruction;
-
+    fn adc<T: Instruction>(&mut self, mode: Box<T>) {
         let data: u16 = mode.load(self);
         let mut result: u32;
         let mut overflow = false;
@@ -1251,521 +1250,160 @@ impl CPU {
         self.set_flag(CarryFlag, overflow);
     }
 
-    fn per(&mut self, mode: &Instruction) {
+    fn per<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn stz(&mut self, mode: &Instruction) {
+    fn stz<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn ror(&mut self, mode: &Instruction) {
+    fn ror<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn pla(&mut self, mode: &Instruction) {
+    fn pla<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn rtl(&mut self, mode: &Instruction) {
+    fn rtl<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn bvs(&mut self, mode: &Instruction) {
+    fn bvs<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn sei(&mut self, mode: &Instruction) {
+    fn sei<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn ply(&mut self, mode: &Instruction) {
+    fn ply<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tdc(&mut self, mode: &Instruction) {
+    fn tdc<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn bra(&mut self, mode: &Instruction) {
+    fn bra<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn sta(&mut self, mode: &Instruction) {
+    fn sta<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn brl(&mut self, mode: &Instruction) {
+    fn brl<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn sty(&mut self, mode: &Instruction) {
+    fn sty<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn stx(&mut self, mode: &Instruction) {
+    fn stx<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn dey(&mut self, mode: &Instruction) {
+    fn dey<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn txa(&mut self, mode: &Instruction) {
+    fn txa<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn phb(&mut self, mode: &Instruction) {
+    fn phb<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn bcc(&mut self, mode: &Instruction) {
+    fn bcc<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tya(&mut self, mode: &Instruction) {
+    fn tya<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn txs(&mut self, mode: &Instruction) {
+    fn txs<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn txy(&mut self, mode: &Instruction) {
+    fn txy<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn ldy(&mut self, mode: &Instruction) {
+    fn ldy<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn lda(&mut self, mode: &Instruction) {
+    fn lda<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn ldx(&mut self, mode: &Instruction) {
+    fn ldx<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tay(&mut self, mode: &Instruction) {
+    fn tay<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tax(&mut self, mode: &Instruction) {
+    fn tax<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn plb(&mut self, mode: &Instruction) {
+    fn plb<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn bcs(&mut self, mode: &Instruction) {
+    fn bcs<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn clv(&mut self, mode: &Instruction) {
+    fn clv<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tsx(&mut self, mode: &Instruction) {
+    fn tsx<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn tyx(&mut self, mode: &Instruction) {
+    fn tyx<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn cpy(&mut self, mode: &Instruction) {
+    fn cpy<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn cmp(&mut self, mode: &Instruction) {
+    fn cmp<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn rep(&mut self, mode: &Instruction) {
+    fn rep<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn iny(&mut self, mode: &Instruction) {
+    fn iny<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn dex(&mut self, mode: &Instruction) {
+    fn dex<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn wai(&mut self, mode: &Instruction) {
+    fn wai<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn bne(&mut self, mode: &Instruction) {
+    fn bne<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn pei(&mut self, mode: &Instruction) {
+    fn pei<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn cld(&mut self, mode: &Instruction) {
+    fn cld<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn phx(&mut self, mode: &Instruction) {
+    fn phx<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn stp(&mut self, mode: &Instruction) {
+    fn stp<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn cpx(&mut self, mode: &Instruction) {
+    fn cpx<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn sbc(&mut self, mode: &Instruction) {
+    fn sbc<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn inx(&mut self, mode: &Instruction) {
+    fn inx<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn nop(&mut self, mode: &Instruction) {
+    fn nop<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn xba(&mut self, mode: &Instruction) {
+    fn xba<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn beq(&mut self, mode: &Instruction) {
+    fn beq<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn pea(&mut self, mode: &Instruction) {
+    fn pea<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn sed(&mut self, mode: &Instruction) {
+    fn sed<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn plx(&mut self, mode: &Instruction) {
+    fn plx<T: Instruction>(&mut self, mode: Box<T>) {
     }
 
-    fn xce(&mut self, mode: &Instruction) {
-    }
-}
-
-pub trait Instruction {
-    fn load(&self, cpu: &mut CPU) -> u16;
-    fn store(&self, cpu: &mut CPU, data: u16);
-}
-
-pub enum InstructionType {
-    LocatingData,
-    ControlTransfer,
-}
-
-struct Absolute { instruction_type: InstructionType }
-impl Instruction for Absolute {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        let pc = cpu.program_counter as usize;
-        let bank = {
-            match self.instruction_type {
-                LocatingData    =>    cpu.data_bank as u32,
-                ControlTransfer => cpu.program_bank as u32,
-            }
-        };
-        let high = cpu.memory.get_byte(pc) as u32;
-        let low = cpu.memory.get_byte(pc + 1) as u32;
-        let addr: u32 = bank << 16 | high << 8 | low;
-
-        cpu.program_counter += 2;
-
-        cpu.memory.get_word(addr as usize)
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-        let pc = cpu.program_counter as usize;
-        let high = cpu.memory.get_byte(pc + 1) as u32;
-        let low = cpu.memory.get_byte(pc + 2) as u32;
-        let addr: u32 = (cpu.data_bank as u32) << 16 | high << 8 | low;
-
-        cpu.program_counter += 3;
-
-        cpu.memory.set_word(addr as usize, data);
-    }
-}
-
-struct AbsoluteIndexedX;
-impl Instruction for AbsoluteIndexedX {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct AbsoluteIndexedY;
-impl Instruction for AbsoluteIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct AbsoluteIndexedIndirect;
-impl Instruction for AbsoluteIndexedIndirect {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct AbsoluteIndirect;
-impl Instruction for AbsoluteIndirect {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct AbsoluteIndirectLong;
-impl Instruction for AbsoluteIndirectLong {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct AbsoluteLong;
-impl Instruction for AbsoluteLong {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct AbsoluteLongIndexedX;
-impl Instruction for AbsoluteLongIndexedX {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct Accumulator;
-impl Instruction for Accumulator {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct BlockMove;
-impl Instruction for BlockMove {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct DirectPage;
-impl Instruction for DirectPage {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct DirectPageIndexedX;
-impl Instruction for DirectPageIndexedX {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct DirectPageIndexedY;
-impl Instruction for DirectPageIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct DirectPageIndexedIndirectX;
-impl Instruction for DirectPageIndexedIndirectX {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct DirectPageIndirect;
-impl Instruction for DirectPageIndirect {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct DirectPageIndirectLong;
-impl Instruction for DirectPageIndirectLong {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct DirectPageIndirectIndexedY;
-impl Instruction for DirectPageIndirectIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct DirectPageIndirectLongIndexedY;
-impl Instruction for DirectPageIndirectLongIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct Immediate;
-impl Instruction for Immediate {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct Implied;
-impl Instruction for Implied {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct ProgramCounterRelative;
-impl Instruction for ProgramCounterRelative {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct ProgramCounterRelativeLong;
-impl Instruction for ProgramCounterRelativeLong {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackAbsolute;
-impl Instruction for StackAbsolute {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackDirectPageIndirect;
-impl Instruction for StackDirectPageIndirect {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackInterrupt;
-impl Instruction for StackInterrupt {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackProgramCounterRelative;
-impl Instruction for StackProgramCounterRelative {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackPull;
-impl Instruction for StackPull {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackPush;
-impl Instruction for StackPush {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackRTI;
-impl Instruction for StackRTI {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackRTL;
-impl Instruction for StackRTL {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackRTS;
-impl Instruction for StackRTS {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackRelative;
-impl Instruction for StackRelative {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
-    }
-}
-
-struct StackRelativeIndirectIndexedY;
-impl Instruction for StackRelativeIndirectIndexedY {
-    fn load(&self, cpu: &mut CPU) -> u16 {
-        1_u16
-    }
-
-    fn store(&self, cpu: &mut CPU, data: u16) {
+    fn xce<T: Instruction>(&mut self, mode: Box<T>) {
     }
 }
 

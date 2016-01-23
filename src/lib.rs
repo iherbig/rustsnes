@@ -3,6 +3,7 @@
 pub mod cpu;
 mod memory;
 mod flags;
+mod modes;
 
 #[test]
 fn test_memory() {
