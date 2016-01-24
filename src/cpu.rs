@@ -4,6 +4,11 @@ use flags::Flags::*;
 use modes::*;
 use modes::InstructionType::*;
 
+const EMULATION_INTERRUPT_VECTOR: u16 = 0xFFFE;
+const NATIVE_INTERRUPT_VECTOR: u16 = 0xFFE6;
+const EMULATION_COPROCESSOR_VECTOR: u16 = 0xFFF4;
+const NATIVE_COPROCESSOR_VECTOR: u16 = 0xFFE4;
+
 macro_rules! decode_op_and_execute {
     ($op:expr, $this:ident) => (
         match $op {
@@ -1045,24 +1050,24 @@ pub struct CPU {
     pub program_bank:      u8,
     pub processor_status:  u8,
     pub program_counter:  u16,
-    emulation_mode:        u8,
+    emulation_mode:      bool,
     pub memory:        Memory,
 }
 
 impl CPU {
 	pub fn new(memory: Memory) -> CPU {
         CPU {
-            accumulator:      0,
-            index_x:          0,
-            index_y:          0,
-            stack_pointer:    0,
-            data_bank:        0,
-            direct_page:      0,
-            program_bank:     0,
-            processor_status: 0,
-            program_counter:  0,
-            emulation_mode:   1,
-            memory:      memory,
+            accumulator:       0,
+            index_x:           0,
+            index_y:           0,
+            stack_pointer:     0,
+            data_bank:         0,
+            direct_page:       0,
+            program_bank:      0,
+            processor_status:  0,
+            program_counter:   0,
+            emulation_mode: true,
+            memory:       memory,
         }
 	}
 
@@ -1101,7 +1106,7 @@ impl CPU {
             ProgramBreakInterruptFlag   => (self.processor_status & 0b00010000) >> 4 == 1,
             OverflowFlag                => (self.processor_status & 0b01000000) >> 6 == 1,
             NegativeFlag                => (self.processor_status & 0b10000000) >> 7 == 1,
-            NativeModeFlag              => self.emulation_mode == 0,
+            NativeModeFlag              => !self.emulation_mode,
 		}
 	}
 	
@@ -1113,19 +1118,100 @@ impl CPU {
 		}
 	}
 
+    fn check_if_negative_u16(data: u16) -> bool {
+        (data & 0x8000) >> 15 == 1
+    }
+    
+    fn check_if_negative_u8(data: u8) -> bool {
+        (data & 0x80) >> 7 == 1
+    }
+
     fn brk<T: Instruction>(&mut self, mode: Box<T>) {
+        self.program_counter += 1;
+
+        let pc = self.program_counter;
+        let ps = self.processor_status as u16;
+        let pb = self.program_bank as u16;
+
+        if self.emulation_mode {
+            mode.store(self, pc);
+            self.set_flag(ProgramBreakInterruptFlag, true);
+            mode.store(self, ps);
+            self.set_flag(IRQDisableFlag, true);
+            self.program_counter = EMULATION_INTERRUPT_VECTOR;
+        } else {
+            mode.store(self, pb);
+            mode.store(self, pc);
+            mode.store(self, ps);
+            self.set_flag(IRQDisableFlag, true);
+            self.program_bank = 0;
+            self.program_counter = NATIVE_INTERRUPT_VECTOR;
+        }
+
+        self.set_flag(DecimalFlag, false);
     }
 
     fn ora<T: Instruction>(&mut self, mode: Box<T>) {
+        let data = mode.load(self);
+        self.accumulator |= data;
+
+        let negative = if self.emulation_mode {
+            CPU::check_if_negative_u8(self.accumulator as u8)
+        } else {
+            CPU::check_if_negative_u16(self.accumulator)
+        };
+
+        self.set_flag(NegativeFlag, negative);
+        let is_zero = self.accumulator == 0;
+        self.set_flag(ZeroFlag, is_zero);
     }
 
     fn cop<T: Instruction>(&mut self, mode: Box<T>) {
+        self.program_counter += 1;
+
+        let pc = self.program_counter;
+        let pb = self.program_bank as u16;
+        let ps = self.processor_status as u16;
+
+        self.set_flag(IRQDisableFlag, true);
+
+        if self.emulation_mode {
+            mode.store(self, pc);
+            self.program_counter = EMULATION_COPROCESSOR_VECTOR;
+        } else {
+            mode.store(self, pb);
+            mode.store(self, pc);
+            mode.store(self, ps);
+            self.program_bank = 0;
+            self.program_counter = NATIVE_COPROCESSOR_VECTOR;
+        }
+
+        self.set_flag(DecimalFlag, true);
     }
 
     fn tsb<T: Instruction>(&mut self, mode: Box<T>) {
+        let data = mode.load(self);
+        let result = data | self.accumulator;
+        let is_zero = (data & self.accumulator) == 0;
+
+        mode.store(self, result);
+
+        self.set_flag(ZeroFlag, is_zero);
     }
 
     fn asl<T: Instruction>(&mut self, mode: Box<T>) {
+        let data = mode.load(self);
+
+        let is_carry = if self.emulation_mode {
+            CPU::check_if_negative_u8(data as u8)
+        } else {
+            CPU::check_if_negative_u16(data)
+        };
+
+        self.set_flag(CarryFlag, is_carry);
+
+        let result = data << 1;
+        mode.store(self, data);
     }
 
     fn php<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1222,7 +1308,8 @@ impl CPU {
     }
 
     fn adc<T: Instruction>(&mut self, mode: Box<T>) {
-        let data: u16 = mode.load(self);
+        let data = mode.load(self);
+
         let mut result: u32;
         let mut overflow = false;
         let acc = self.accumulator;
@@ -1242,7 +1329,7 @@ impl CPU {
 
         self.accumulator = result as u16;
 
-        let negative = (self.accumulator & 0x8000) >> 15 == 1;
+        let negative = CPU::check_if_negative_u16(self.accumulator);
 
         self.set_flag(NegativeFlag, negative);
         self.set_flag(OverflowFlag, (!orig_neg && negative) || (overflow && negative));
