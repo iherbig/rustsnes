@@ -1,9 +1,13 @@
+
+const LOROM_ROM_NAME_START: usize = 0x7FC0;
+const HIROM_ROM_NAME_START: usize = 0xFFC0;
+
 pub struct Memory {
 	ram: Vec<u8>,
 }
 
 impl Memory {
-    pub fn new() -> Memory {
+    pub fn new(rom: Vec<u8>) -> Memory {
         Memory { ram: vec![0; 16777215] }
     }
 
