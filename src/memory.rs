@@ -82,107 +82,85 @@ impl Memory {
         let bank = (addr_offset & 0xFF0000) >> 16;
         let offset = addr_offset & 0xFFFF;
 
+        println!("header_offset {:x} addr_offset {:x} bank {:x} offset {:x}", header_offset, addr_offset, bank, offset);
+
         match self.rom.rom_type {
             LoROM | FastLoROM => {
                 match bank {
-                    0x00 ... 0x3F => {
+                    0x00 ... 0x3F | 0x80 ... 0xBF => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                panic!("Unimplemented: LowRAM, shadowed from bank 0x7E")
+                                panic!("Unimplemented: LowRAM, shadowed from bank 0x7E {:x}", addr_offset)
                             },
                             0x2000 ... 0x20FF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x2100 ... 0x21FF => {
-                                panic!("Unimplemented: PPU1, APU, hardware registers")
+                                panic!("Unimplemented: PPU1, APU, hardware registers {:x}", addr_offset)
                             },
                             0x2200 ... 0x2FFF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x3000 ... 0x3FFF => {
-                                panic!("Unimplemented: DSP, SuperFX, hardware registers")
+                                panic!("Unimplemented: DSP, SuperFX, hardware registers {:x}", addr_offset)
                             },
                             0x4000 ... 0x40FF => {
-                                panic!("Unimplemented: Old style joypad registers")
+                                panic!("Unimplemented: Old style joypad registers {:x}", addr_offset)
                             },
                             0x4100 ... 0x41FF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x4200 ... 0x44FF => {
-                                panic!("Unimplemented: DMA, PPU2, hardware registers")
+                                panic!("Unimplemented: DMA, PPU2, hardware registers {:x}", addr_offset)
                             },
                             0x4500 ... 0x5FFF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x6000 ... 0xFFFF => {
-                                self.rom.data[(0x8000 * bank) + offset]
+                                self.rom.data[(0x8000 * if bank >= 0x80 { bank - 0x80 } else { bank }) + offset]
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
-                    0x40 ... 0x6F => {
+                    0x40 ... 0x6F | 0xC0 ... 0xEF => {
                         match offset {
                             0x0000 ... 0x7FFF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x8000 ... 0xFFFF => {
-                                self.rom.data[(0x8000 * bank) + offset]
+                                self.rom.data[(0x8000 * if bank >= 0xC0 { bank - 0x80 } else { bank }) + offset]
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
-                    0x70 ... 0x7D => {
+                    0x70 ... 0x7D | 0xF0 ... 0xFD => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                self.rom.data[(0x8000 * bank) + offset]
+                                self.rom.data[(0x8000 * if bank >= 0xF0 { bank - 0x80 } else { bank }) + offset]
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
                     0x7E => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                panic!("Unimplemented: LowRAM (WRAM)")
+                                panic!("Unimplemented: LowRAM (WRAM) {:x}", addr_offset)
                             },
                             0x2000 ... 0x7FFF => {
-                                panic!("Unimplemented: HighRAM (WRAM)")
+                                panic!("Unimplemented: HighRAM (WRAM) {:x}", addr_offset)
                             },
                             0x8000 ... 0xFFFF => {
-                                panic!("Unimplemented: Extended RAM (WRAM)")
+                                panic!("Unimplemented: Extended RAM (WRAM) {:x}", addr_offset)
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
                     0x7F => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                panic!("Unimplemented: Extended RAM (WRAM)")
+                                panic!("Unimplemented: Extended RAM (WRAM) {:x}", addr_offset)
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
-                        }
-                    },
-                    0x80 ... 0xBF => {
-                        match offset {
-                            0x0000 ... 0xFFFF => {
-                                panic!("Unimplemented: Mirror of 0x00 - 0x3F")
-                            },
-                            _ => unreachable!("Invalid address {}", addr_offset)
-                        }
-                    },
-                    0xC0 ... 0xEF => {
-                        match offset {
-                            0x0000 ... 0xFFFF => {
-                                panic!("Unimplemented: Mirror of 0x40 - 0x6F")
-                            },
-                            _ => unreachable!("Invalid address {}", addr_offset)
-                        }
-                    },
-                    0xF0 ... 0xFD => {
-                        match offset {
-                            0x0000 ... 0xFFFF => {
-                                panic!("Unimplemented: Mirror of 0x70 - 0x7D")
-                            },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
                     0xFE ... 0xFF => {
@@ -190,139 +168,115 @@ impl Memory {
                             0x0000 ... 0xFFFF => {
                                 self.rom.data[(bank << 16) + offset]
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
-                    _ => unreachable!("Invalid address {}", addr_offset)
+                    _ => unreachable!("Invalid address {:x}", addr_offset)
                 }
             },
             HiROM | FastHiROM => {
                 match bank {
-                    0x00 ... 0x1F => {
+                    0x00 ... 0x1F | 0x80 ... 0x9F => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                panic!("Unimplemented: LowRAM, shadowed from bank 0x7E")
+                                panic!("Unimplemented: LowRAM, shadowed from bank 0x7E {:x}", addr_offset)
                             },
                             0x2000 ... 0x20FF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x2100 ... 0x21FF => {
-                                panic!("Unimplemented: PPU1, APU, hardware registers")
+                                panic!("Unimplemented: PPU1, APU, hardware registers {:x}", addr_offset)
                             },
                             0x2200 ... 0x2FFF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x3000 ... 0x3FFF => {
-                                panic!("Unimplemented: DSP, SuperFX, hardware registers")
+                                panic!("Unimplemented: DSP, SuperFX, hardware registers {:x}", addr_offset)
                             },
                             0x4000 ... 0x40FF => {
-                                panic!("Unimplemented: Old style joypad registers")
+                                panic!("Unimplemented: Old style joypad registers {:x}", addr_offset)
                             },
                             0x4100 ... 0x41FF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x4200 ... 0x44FF => {
-                                panic!("Unimplemented: DMA, PPU2, hardware registers")
+                                panic!("Unimplemented: DMA, PPU2, hardware registers {:x}", addr_offset)
                             },
                             0x4500 ... 0x5FFF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x6000 ... 0xFFFF => {
-                                self.rom.data[(bank << 16) + offset]
+                                self.rom.data[((if bank >= 0x80 { bank - 0x80 } else { bank }) << 16) + offset]
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
-                    0x20 ... 0x3F => {
+                    0x20 ... 0x3F | 0xA0 ... 0xBF => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                panic!("Unimplemented: LowRAM, shadowed from bank 0x7E")
+                                panic!("Unimplemented: LowRAM, shadowed from bank 0x7E {:x}", addr_offset)
                             },
                             0x2000 ... 0x20FF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x2100 ... 0x21FF => {
-                                panic!("Unimplemented: PPU1, APU, hardware registers")
+                                panic!("Unimplemented: PPU1, APU, hardware registers {:x}", addr_offset)
                             },
                             0x2200 ... 0x2FFF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x3000 ... 0x3FFF => {
-                                panic!("Unimplemented: DSP, SuperFX, hardware registers")
+                                panic!("Unimplemented: DSP, SuperFX, hardware registers {:x}", addr_offset)
                             },
                             0x4000 ... 0x40FF => {
-                                panic!("Unimplemented: Old style joypad registers")
+                                panic!("Unimplemented: Old style joypad registers {:x}", addr_offset)
                             },
                             0x4100 ... 0x41FF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x4200 ... 0x44FF => {
-                                panic!("Unimplemented: DMA, PPU2, hardware registers")
+                                panic!("Unimplemented: DMA, PPU2, hardware registers {:x}", addr_offset)
                             },
                             0x4500 ... 0x5FFF => {
-                                unreachable!("Invalid address {}", addr_offset)
+                                unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x6000 ... 0x7FFF => {
-                                self.sram[((bank - 0x20) << 16) + offset]
+                                self.sram[((if bank >= 0xA0 { bank - 0x80 - 0x20 } else { bank - 0x20 }) << 16) + offset]
                             },
                             0x8000 ... 0xFFFF => {
-                                self.rom.data[(bank << 16) + offset]
+                                self.rom.data[((if bank >= 0xA0 { bank - 0x80 } else { bank }) << 16) + offset]
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
-                    0x40 ... 0x7D => {
+                    0x40 ... 0x7D | 0xC0 ... 0xFD => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                self.rom.data[((bank - 0x40) * 0x8000) + offset]
+                                self.rom.data[(((if bank >= 0xC0 { bank - 0x80 - 0x40 } else { bank - 0x40})) * 0x8000) + offset]
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
                     0x7E => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                panic!("Unimplemented: LowRAM (WRAM)")
+                                panic!("Unimplemented: LowRAM (WRAM) {:x}", addr_offset)
                             },
                             0x2000 ... 0x7FFF => {
-                                panic!("Unimplemented: HighRAM (WRAM)")
+                                panic!("Unimplemented: HighRAM (WRAM) {:x}", addr_offset)
                             },
                             0x8000 ... 0xFFFF => {
-                                panic!("Unimplemented: Expanded RAM (WRAM)")
+                                panic!("Unimplemented: Expanded RAM (WRAM) {:x}", addr_offset)
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
                     0x7F => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                panic!("Unimplemented: Expanded RAM (WRAM)")
+                                panic!("Unimplemented: Expanded RAM (WRAM) {:x}", addr_offset)
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
-                        }
-                    },
-                    0x80 ... 0x9F => {
-                        match offset {
-                            0x0000 ... 0xFFFF => {
-                                panic!("Unimplemented: Mirror of 0x00 - 0x1F)")
-                            },
-                            _ => unreachable!("Invalid address {}", addr_offset)
-                        }
-                    },
-                    0xA0 ... 0xBF => {
-                        match offset {
-                            0x0000 ... 0xFFFF => {
-                                panic!("Unimplemented: Mirror of 0x20 - 0x3F")
-                            },
-                            _ => unreachable!("Invalid address {}", addr_offset)
-                        }
-                    },
-                    0xC0 ... 0xFD => {
-                        match offset {
-                            0x0000 ... 0xFFFF => {
-                                panic!("Unimplemented: Mirror of 0x40 - 0x7D")
-                            },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
                     0xFE ... 0xFF => {
@@ -330,10 +284,10 @@ impl Memory {
                             0x0000 ... 0xFFFF => {
                                 self.rom.data[(bank << 16) + offset]
                             },
-                            _ => unreachable!("Invalid address {}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
                     },
-                    _ => unreachable!("Invalid address {}", addr_offset)
+                    _ => unreachable!("Invalid address {:x}", addr_offset)
                 }
             },
             ExLoROM => {

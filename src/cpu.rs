@@ -887,7 +887,7 @@ macro_rules! decode_op_and_execute {
             },
             0xE2 => {
                 let mode = Box::new(Immediate);
-                $this.cpx(mode);
+                $this.sep(mode);
             },
             0xE3 => {
                 let mode = Box::new(DirectPage);
@@ -1430,6 +1430,10 @@ impl CPU {
         self.emulation_mode = self.processor_status.Carry;
         self.processor_status.Carry = emu_bit;
         self.program_counter += 1;
+    }
+
+    fn sep<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("sep unimplemented")
     }
 }
 
