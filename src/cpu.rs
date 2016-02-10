@@ -102,8 +102,7 @@ macro_rules! decode_op_and_execute {
                 $this.ora(mode);
             },
             0x18 => {
-                let mode = Box::new(Implied);
-                $this.clc(mode);
+                $this.clc();
             },
             0x19 => {
                 let mode = Box::new(AbsoluteIndexedY);
@@ -114,8 +113,7 @@ macro_rules! decode_op_and_execute {
                 $this.inc(mode);
             },
             0x1B => {
-                let mode = Box::new(Implied);
-                $this.tcs(mode);
+                $this.tcs();
             },
             0x1C => {
                 let mode = Box::new(Absolute { instruction_type: LocatingData });
@@ -230,8 +228,7 @@ macro_rules! decode_op_and_execute {
                 $this.and(mode);
             },
             0x38 => {
-                let mode = Box::new(Implied);
-                $this.sec(mode);
+                $this.sec();
             },
             0x39 => {
                 let mode = Box::new(AbsoluteIndexedY);
@@ -242,8 +239,7 @@ macro_rules! decode_op_and_execute {
                 $this.dec(mode);
             },
             0x3B => {
-                let mode = Box::new(Implied);
-                $this.tsc(mode);
+                $this.tsc();
             },
             0x3C => {
                 let mode = Box::new(AbsoluteIndexedX);
@@ -357,8 +353,7 @@ macro_rules! decode_op_and_execute {
                 $this.eor(mode);
             },
             0x58 => {
-                let mode = Box::new(Implied);
-                $this.cli(mode);
+                $this.cli();
             },
             0x59 => {
                 let mode = Box::new(AbsoluteIndexedY);
@@ -369,8 +364,7 @@ macro_rules! decode_op_and_execute {
                 $this.phy(mode);
             },
             0x5B => {
-                let mode = Box::new(Implied);
-                $this.tcd(mode);
+                $this.tcd();
             },
             0x5C => {
                 let mode = Box::new(AbsoluteLong);
@@ -485,8 +479,7 @@ macro_rules! decode_op_and_execute {
                 $this.adc(mode);
             },
             0x78 => {
-                let mode = Box::new(Implied);
-                $this.sei(mode);
+                $this.sei();
             },
             0x79 => {
                 let mode = Box::new(AbsoluteIndexedY);
@@ -497,8 +490,7 @@ macro_rules! decode_op_and_execute {
                 $this.ply(mode);
             },
             0x7B => {
-                let mode = Box::new(Implied);
-                $this.tdc(mode);
+                $this.tdc();
             },
             0x7C => {
                 let mode = Box::new(AbsoluteIndexedIndirect);
@@ -549,16 +541,14 @@ macro_rules! decode_op_and_execute {
                 $this.sta(mode);
             },
             0x88 => {
-                let mode = Box::new(Implied);
-                $this.dey(mode);
+                $this.dey();
             },
             0x89 => {
                 let mode = Box::new(Immediate);
                 $this.bit(mode);
             },
             0x8A => {
-                let mode = Box::new(Implied);
-                $this.txa(mode);
+                $this.txa();
             },
             0x8B => {
                 let mode = Box::new(StackPush);
@@ -613,20 +603,17 @@ macro_rules! decode_op_and_execute {
                 $this.sta(mode);
             },
             0x98 => {
-                let mode = Box::new(Implied);
-                $this.tya(mode);
+                $this.tya();
             },
             0x99 => {
                 let mode = Box::new(AbsoluteIndexedY);
                 $this.sta(mode);
             },
             0x9A => {
-                let mode = Box::new(Implied);
-                $this.txs(mode);
+                $this.txs();
             },
             0x9B => {
-                let mode = Box::new(Implied);
-                $this.txy(mode);
+                $this.txy();
             },
             0x9C => {
                 let mode = Box::new(Absolute { instruction_type: LocatingData });
@@ -677,16 +664,14 @@ macro_rules! decode_op_and_execute {
                 $this.lda(mode);
             },
             0xA8 => {
-                let mode = Box::new(Implied);
-                $this.tay(mode);
+                $this.tay();
             },
             0xA9 => {
                 let mode = Box::new(Immediate);
                 $this.lda(mode);
             },
             0xAA => {
-                let mode = Box::new(Implied);
-                $this.tax(mode);
+                $this.tax();
             },
             0xAB => {
                 let mode = Box::new(StackPull);
@@ -741,20 +726,17 @@ macro_rules! decode_op_and_execute {
                 $this.lda(mode);
             },
             0xB8 => {
-                let mode = Box::new(Implied);
-                $this.clv(mode);
+                $this.clv();
             },
             0xB9 => {
                 let mode = Box::new(AbsoluteIndexedY);
                 $this.lda(mode);
             },
             0xBA => {
-                let mode = Box::new(Implied);
-                $this.tsx(mode);
+                $this.tsx();
             },
             0xBB => {
-                let mode = Box::new(Implied);
-                $this.tyx(mode);
+                $this.tyx();
             },
             0xBC => {
                 let mode = Box::new(AbsoluteIndexedX);
@@ -805,20 +787,17 @@ macro_rules! decode_op_and_execute {
                 $this.cmp(mode);
             },
             0xC8 => {
-                let mode = Box::new(Implied);
-                $this.iny(mode);
+                $this.iny();
             },
             0xC9 => {
                 let mode = Box::new(Immediate);
                 $this.cmp(mode);
             },
             0xCA => {
-                let mode = Box::new(Implied);
-                $this.dex(mode);
+                $this.dex();
             },
             0xCB => {
-                let mode = Box::new(Implied);
-                $this.wai(mode);
+                $this.wai();
             },
             0xCC => {
                 let mode = Box::new(Absolute { instruction_type: LocatingData });
@@ -869,8 +848,7 @@ macro_rules! decode_op_and_execute {
                 $this.cmp(mode);
             },
             0xD8 => {
-                let mode = Box::new(Implied);
-                $this.cld(mode);
+                $this.cld();
             },
             0xD9 => {
                 let mode = Box::new(AbsoluteIndexedY);
@@ -881,8 +859,7 @@ macro_rules! decode_op_and_execute {
                 $this.phx(mode);
             },
             0xDB => {
-                let mode = Box::new(Implied);
-                $this.stp(mode);
+                $this.stp();
             },
             0xDC => {
                 let mode = Box::new(AbsoluteIndirectLong);
@@ -933,7 +910,7 @@ macro_rules! decode_op_and_execute {
                 $this.sbc(mode);
             },
             0xE8 => {
-                let mode = Box::new(Implied);
+                let mode = Box::new(Dummy);
                 $this.inx(mode);
             },
             0xE9 => {
@@ -941,12 +918,10 @@ macro_rules! decode_op_and_execute {
                 $this.sbc(mode);
             },
             0xEA => {
-                let mode = Box::new(Implied);
-                $this.nop(mode);
+                $this.nop();
             },
             0xEB => {
-                let mode = Box::new(Implied);
-                $this.xba(mode);
+                $this.xba();
             },
             0xEC => {
                 let mode = Box::new(Absolute { instruction_type: LocatingData });
@@ -997,8 +972,7 @@ macro_rules! decode_op_and_execute {
                 $this.sbc(mode);
             },
             0xF8 => {
-                let mode = Box::new(Implied);
-                $this.sed(mode);
+                $this.sed();
             },
             0xF9 => {
                 let mode = Box::new(AbsoluteIndexedY);
@@ -1009,8 +983,7 @@ macro_rules! decode_op_and_execute {
                 $this.plx(mode);
             },
             0xFB => {
-                let mode = Box::new(Implied);
-                $this.xce(mode);
+                $this.xce();
             },
             0xFC => {
                 let mode = Box::new(AbsoluteIndexedIndirect);
@@ -1040,8 +1013,8 @@ pub struct CPU {
     stack_pointer:         u16,
     pub data_bank:          u8,
     pub direct_page:       u16,
-    pub program_bank:       u8,
-    pub processor_status:   u8,
+    pub program_bank:       usize,
+    pub processor_status:   ProcessorStatus,
     pub program_counter: usize,
     emulation_mode:       bool,
     pub memory:         Memory,
@@ -1073,9 +1046,9 @@ impl CPU {
             data_bank:         0,
             direct_page:       0,
             program_bank:      0,
-            processor_status:  0,
+            processor_status:  ProcessorStatus::default(),
             program_counter:   pc,
-            emulation_mode: true,
+            emulation_mode: false,
             memory:       memory,
         }
 	}
@@ -1087,7 +1060,7 @@ impl CPU {
     }
 
     fn run_instruction(&mut self) {
-        let opcode = self.memory.get_byte(self.program_counter);
+        let opcode = self.memory.get_byte((self.program_bank << 16) | self.program_counter);
         decode_op_and_execute!(opcode, self);
     }
 
@@ -1127,15 +1100,18 @@ impl CPU {
         panic!("trb unimplemented")
     }
 
-    fn clc<T: Instruction>(&mut self, mode: Box<T>) {
-        panic!("clc unimplemented")
+    fn clc(&mut self) {
+        use self::StatusFlags::Carry;
+
+        self.processor_status.set_flag(Carry, false);
+        self.program_counter += 1;
     }
 
     fn inc<T: Instruction>(&mut self, mode: Box<T>) {
         panic!("inc unimplemented")
     }
 
-    fn tcs<T: Instruction>(&mut self, mode: Box<T>) {
+    fn tcs(&mut self) {
         panic!("tcs unimplemented")
     }
 
@@ -1167,7 +1143,7 @@ impl CPU {
         panic!("bmi unimplemented")
     }
 
-    fn sec<T: Instruction>(&mut self, mode: Box<T>) {
+    fn sec(&mut self) {
         panic!("sec unimplemented")
     }
 
@@ -1175,7 +1151,7 @@ impl CPU {
         panic!("dec unimplemented")
     }
 
-    fn tsc<T: Instruction>(&mut self, mode: Box<T>) {
+    fn tsc(&mut self) {
         panic!("tsc unimplemented")
     }
 
@@ -1208,7 +1184,9 @@ impl CPU {
     }
 
     fn jmp<T: Instruction>(&mut self, mode: Box<T>) {
-        panic!("jmp unimplemented")
+        let jump_addr = mode.load(self) as usize;
+        self.program_counter = jump_addr & 0x00FFFF;
+        self.program_bank = (jump_addr & 0xFF0000) >> 16;
     }
 
     fn bvc<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1219,7 +1197,7 @@ impl CPU {
         panic!("mvn unimplemented")
     }
 
-    fn cli<T: Instruction>(&mut self, mode: Box<T>) {
+    fn cli(&mut self) {
         panic!("cli unimplemented")
     }
 
@@ -1227,7 +1205,7 @@ impl CPU {
         panic!("phy unimplemented")
     }
 
-    fn tcd<T: Instruction>(&mut self, mode: Box<T>) {
+    fn tcd(&mut self) {
         panic!("tcd unimplemented")
     }
 
@@ -1263,15 +1241,18 @@ impl CPU {
         panic!("bvs unimplemented")
     }
 
-    fn sei<T: Instruction>(&mut self, mode: Box<T>) {
-        panic!("sei unimplemented")
+    fn sei(&mut self) {
+        use self::StatusFlags::IRQDisable;
+
+        self.processor_status.set_flag(IRQDisable, true);
+        self.program_counter += 1;
     }
 
     fn ply<T: Instruction>(&mut self, mode: Box<T>) {
         panic!("ply unimplemented")
     }
 
-    fn tdc<T: Instruction>(&mut self, mode: Box<T>) {
+    fn tdc(&mut self) {
         panic!("tdc unimplemented")
     }
 
@@ -1295,11 +1276,11 @@ impl CPU {
         panic!("stx unimplemented")
     }
 
-    fn dey<T: Instruction>(&mut self, mode: Box<T>) {
+    fn dey(&mut self) {
         panic!("dey unimplemented")
     }
 
-    fn txa<T: Instruction>(&mut self, mode: Box<T>) {
+    fn txa(&mut self) {
         panic!("txa unimplemented")
     }
 
@@ -1311,15 +1292,15 @@ impl CPU {
         panic!("bcc unimplemented")
     }
 
-    fn tya<T: Instruction>(&mut self, mode: Box<T>) {
+    fn tya(&mut self) {
         panic!("tya unimplemented")
     }
 
-    fn txs<T: Instruction>(&mut self, mode: Box<T>) {
+    fn txs(&mut self) {
         panic!("txs unimplemented")
     }
 
-    fn txy<T: Instruction>(&mut self, mode: Box<T>) {
+    fn txy(&mut self) {
         panic!("txy unimplemented")
     }
 
@@ -1335,11 +1316,11 @@ impl CPU {
         panic!("ldx unimplemented")
     }
 
-    fn tay<T: Instruction>(&mut self, mode: Box<T>) {
+    fn tay(&mut self) {
         panic!("tay unimplemented")
     }
 
-    fn tax<T: Instruction>(&mut self, mode: Box<T>) {
+    fn tax(&mut self) {
         panic!("tax unimplemented")
     }
 
@@ -1351,15 +1332,15 @@ impl CPU {
         panic!("bcs unimplemented")
     }
 
-    fn clv<T: Instruction>(&mut self, mode: Box<T>) {
+    fn clv(&mut self) {
         panic!("clv unimplemented")
     }
 
-    fn tsx<T: Instruction>(&mut self, mode: Box<T>) {
+    fn tsx(&mut self) {
         panic!("tsx unimplemented")
     }
 
-    fn tyx<T: Instruction>(&mut self, mode: Box<T>) {
+    fn tyx(&mut self) {
         panic!("tyx unimplemented")
     }
 
@@ -1375,15 +1356,15 @@ impl CPU {
         panic!("rep unimplemented")
     }
 
-    fn iny<T: Instruction>(&mut self, mode: Box<T>) {
+    fn iny(&mut self) {
         panic!("iny unimplemented")
     }
 
-    fn dex<T: Instruction>(&mut self, mode: Box<T>) {
+    fn dex(&mut self) {
         panic!("dex unimplemented")
     }
 
-    fn wai<T: Instruction>(&mut self, mode: Box<T>) {
+    fn wai(&mut self) {
         panic!("wai unimplemented")
     }
 
@@ -1395,7 +1376,7 @@ impl CPU {
         panic!("pei unimplemented")
     }
 
-    fn cld<T: Instruction>(&mut self, mode: Box<T>) {
+    fn cld(&mut self) {
         panic!("cld unimplemented")
     }
 
@@ -1403,7 +1384,7 @@ impl CPU {
         panic!("phx unimplemented")
     }
 
-    fn stp<T: Instruction>(&mut self, mode: Box<T>) {
+    fn stp(&mut self) {
         panic!("stp unimplemented")
     }
 
@@ -1419,11 +1400,11 @@ impl CPU {
         panic!("inx unimplemented")
     }
 
-    fn nop<T: Instruction>(&mut self, mode: Box<T>) {
+    fn nop(&mut self) {
         panic!("nop unimplemented")
     }
 
-    fn xba<T: Instruction>(&mut self, mode: Box<T>) {
+    fn xba(&mut self) {
         panic!("xba unimplemented")
     }
 
@@ -1435,7 +1416,7 @@ impl CPU {
         panic!("pea unimplemented")
     }
 
-    fn sed<T: Instruction>(&mut self, mode: Box<T>) {
+    fn sed(&mut self) {
         panic!("sed unimplemented")
     }
 
@@ -1443,20 +1424,51 @@ impl CPU {
         panic!("plx unimplemented")
     }
 
-    fn xce<T: Instruction>(&mut self, mode: Box<T>) {
-        panic!("xce unimplemented")
+    fn xce(&mut self) {
+        let emu_bit = self.emulation_mode;
+
+        self.emulation_mode = self.processor_status.Carry;
+        self.processor_status.Carry = emu_bit;
+        self.program_counter += 1;
     }
 }
 
-enum ProcessorStatus {
-    Negative = 0x80,
-    Overflow = 0x40,
-    Zero = 0x02,
-    Carry = 0x01,
-    Decimal = 0x08,
-    IRQDisable = 0x04,
-    IndexRegisterSize = 0x10,
-    AccumulatorRegisterSize = 0x20,
-    EmulationMode,
+#[derive(Default, Debug)]
+pub struct ProcessorStatus {
+    pub Negative: bool,
+    pub Overflow: bool,
+    pub Zero: bool,
+    pub Carry: bool,
+    pub Decimal: bool,
+    pub IRQDisable: bool,
+    pub IndexRegisterSize: bool,
+    pub AccumulatorRegisterSize: bool,
 }
 
+impl ProcessorStatus {
+    pub fn set_flag(&mut self, flag: StatusFlags, val: bool) {
+        use self::StatusFlags::*;
+
+        match flag {
+            Negative => self.Negative = val,
+            Overflow => self.Overflow = val,
+            Zero => self.Zero = val,
+            Carry => self.Carry = val,
+            Decimal => self.Decimal = val,
+            IRQDisable => self.IRQDisable = val,
+            IndexRegisterSize => self.IndexRegisterSize = val,
+            AccumulatorRegisterSize => self.AccumulatorRegisterSize = val,
+        }
+    }
+}
+
+pub enum StatusFlags {
+    Negative,
+    Overflow,
+    Zero,
+    Carry,
+    Decimal,
+    IRQDisable,
+    IndexRegisterSize,
+    AccumulatorRegisterSize,
+}

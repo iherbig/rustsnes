@@ -114,10 +114,7 @@ impl Memory {
                             0x4500 ... 0x5FFF => {
                                 unreachable!("Invalid address {}", addr_offset)
                             },
-                            0x6000 ... 0x7FFF => {
-                                unreachable!("Reserved memory {}", addr_offset)
-                            },
-                            0x8000 ... 0xFFFF => {
+                            0x6000 ... 0xFFFF => {
                                 self.rom.data[(0x8000 * bank) + offset]
                             },
                             _ => unreachable!("Invalid address {}", addr_offset)
@@ -136,10 +133,7 @@ impl Memory {
                     },
                     0x70 ... 0x7D => {
                         match offset {
-                            0x0000 ... 0x7FFF => {
-                                self.sram[((bank - 0x70) << 16) + offset]
-                            },
-                            0x8000 ... 0xFFFF => {
+                            0x0000 ... 0xFFFF => {
                                 self.rom.data[(0x8000 * bank) + offset]
                             },
                             _ => unreachable!("Invalid address {}", addr_offset)
@@ -193,10 +187,7 @@ impl Memory {
                     },
                     0xFE ... 0xFF => {
                         match offset {
-                            0x0000 ... 0x7FFF => {
-                                self.sram[((bank - 0xFE) << 16) + offset]
-                            },
-                            0x8000 ... 0xFFFF => {
+                            0x0000 ... 0xFFFF => {
                                 self.rom.data[(bank << 16) + offset]
                             },
                             _ => unreachable!("Invalid address {}", addr_offset)
@@ -236,10 +227,7 @@ impl Memory {
                             0x4500 ... 0x5FFF => {
                                 unreachable!("Invalid address {}", addr_offset)
                             },
-                            0x6000 ... 0x7FFF => {
-                                unreachable!("Reserved {}", addr_offset)
-                            },
-                            0x8000 ... 0xFFFF => {
+                            0x6000 ... 0xFFFF => {
                                 self.rom.data[(bank << 16) + offset]
                             },
                             _ => unreachable!("Invalid address {}", addr_offset)
