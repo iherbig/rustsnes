@@ -13,33 +13,10 @@ pub enum InstructionType {
 pub struct Absolute { pub instruction_type: InstructionType }
 impl Instruction for Absolute {
     fn load(&self, cpu: &mut CPU) -> u16 {
-        use self::InstructionType::*;
-
-        let pc = cpu.program_counter as usize;
-        let bank = {
-            match self.instruction_type {
-                LocatingData    =>    cpu.data_bank as u32,
-                ControlTransfer => cpu.program_bank as u32,
-            }
-        };
-        let high = cpu.memory.get_byte(pc) as u32;
-        let low = cpu.memory.get_byte(pc + 1) as u32;
-        let addr: u32 = bank << 16 | high << 8 | low;
-
-        cpu.program_counter += 2;
-
-        cpu.memory.get_word(addr as usize)
+        1_u16
     }
 
     fn store(&self, cpu: &mut CPU, data: u16) {
-        let pc = cpu.program_counter as usize;
-        let high = cpu.memory.get_byte(pc + 1) as u32;
-        let low = cpu.memory.get_byte(pc + 2) as u32;
-        let addr: u32 = (cpu.data_bank as u32) << 16 | high << 8 | low;
-
-        cpu.program_counter += 3;
-
-        cpu.memory.set_word(addr as usize, data);
     }
 }
 

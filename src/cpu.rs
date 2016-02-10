@@ -1,13 +1,6 @@
-use memory::Memory;
-use flags::Flags;
-use flags::Flags::*;
+use memory::{Memory, LOROM_EMU_MODE_VECTORS, HIROM_EMU_MODE_VECTORS};
 use modes::*;
 use modes::InstructionType::*;
-
-const EMULATION_INTERRUPT_VECTOR: u16 = 0xFFFE;
-const NATIVE_INTERRUPT_VECTOR: u16 = 0xFFE6;
-const EMULATION_COPROCESSOR_VECTOR: u16 = 0xFFF4;
-const NATIVE_COPROCESSOR_VECTOR: u16 = 0xFFE4;
 
 macro_rules! decode_op_and_execute {
     ($op:expr, $this:ident) => (
@@ -1041,21 +1034,37 @@ macro_rules! decode_op_and_execute {
 }
 
 pub struct CPU {
-    accumulator:          u16,
-    index_x:              u16,
-    index_y:              u16,
-    stack_pointer:        u16,
-    pub data_bank:         u8,
-    pub direct_page:      u16,
-    pub program_bank:      u8,
-    pub processor_status:  u8,
-    pub program_counter:  u16,
-    emulation_mode:      bool,
-    pub memory:        Memory,
+    accumulator:           u16,
+    index_x:               u16,
+    index_y:               u16,
+    stack_pointer:         u16,
+    pub data_bank:          u8,
+    pub direct_page:       u16,
+    pub program_bank:       u8,
+    pub processor_status:   u8,
+    pub program_counter: usize,
+    emulation_mode:       bool,
+    pub memory:         Memory,
 }
 
 impl CPU {
 	pub fn new(memory: Memory) -> CPU {
+        use memory::Vectors::*;
+        use memory::RomType::*;
+
+        let pc = match memory.rom.rom_type {
+            LoROM | FastLoROM => {
+                let vector_loc = LOROM_EMU_MODE_VECTORS[RESET as usize];
+                memory.get_byte(vector_loc) as usize |
+                    ((memory.get_byte(vector_loc + 1) as usize) << 8)
+            },
+            HiROM | FastHiROM => {
+                let vector_loc = HIROM_EMU_MODE_VECTORS[RESET as usize];
+                memory.get_byte(vector_loc) as usize | ((memory.get_byte(vector_loc + 1) as usize) << 8)
+            },
+            _ => panic!("ExLo/HiROM formats not supported")
+        };
+
         CPU {
             accumulator:       0,
             index_x:           0,
@@ -1065,432 +1074,389 @@ impl CPU {
             direct_page:       0,
             program_bank:      0,
             processor_status:  0,
-            program_counter:   0,
+            program_counter:   pc,
             emulation_mode: true,
             memory:       memory,
         }
 	}
 
-    pub fn set_origin(&mut self, addr: u16) {
-        self.program_counter = addr;
-    }
-
-    pub fn set_acc(&mut self, value: u16) {
-        self.accumulator = value;
-    }
-
-    pub fn check_acc(&self) -> u16 {
-        self.accumulator
-    }
-
-    pub fn get_flags(&self) -> u8 {
-        self.processor_status
-    }
-	
-    pub fn execute(&mut self, num_instructions: usize) {
-        for i in 0..num_instructions {
-            let opcode = self.memory.get_byte(self.program_counter as usize);
-            self.program_counter += 1;
-            decode_op_and_execute!(opcode, self);
+    pub fn run(&mut self) {
+        loop {
+            self.run_instruction();
         }
     }
 
-	pub fn check_flag(&self, mask: Flags) -> bool {
-		match mask {
-            CarryFlag                   => self.processor_status & 0b00000001 == 1,
-            ZeroFlag                    => (self.processor_status & 0b00000010) >> 1 == 1,
-            IRQDisableFlag              => (self.processor_status & 0b00000100) >> 2 == 1,
-            DecimalFlag                 => (self.processor_status & 0b00001000) >> 3 == 1,
-            IndexRegisterSizeFlag       => (self.processor_status & 0b00010000) >> 4 == 1,
-            AccumulatorRegisterSizeFlag => (self.processor_status & 0b00100000) >> 5 == 1,
-            ProgramBreakInterruptFlag   => (self.processor_status & 0b00010000) >> 4 == 1,
-            OverflowFlag                => (self.processor_status & 0b01000000) >> 6 == 1,
-            NegativeFlag                => (self.processor_status & 0b10000000) >> 7 == 1,
-            NativeModeFlag              => !self.emulation_mode,
-		}
-	}
-	
-	pub fn set_flag(&mut self, flag: Flags, val: bool) {
-		if val {
-			self.processor_status = self.processor_status | flag
-		} else {
-			self.processor_status = self.processor_status & !flag
-		}
-	}
-
-    fn check_if_negative_u16(data: u16) -> bool {
-        (data & 0x8000) >> 15 == 1
-    }
-    
-    fn check_if_negative_u8(data: u8) -> bool {
-        (data & 0x80) >> 7 == 1
+    fn run_instruction(&mut self) {
+        let opcode = self.memory.get_byte(self.program_counter);
+        decode_op_and_execute!(opcode, self);
     }
 
     fn brk<T: Instruction>(&mut self, mode: Box<T>) {
-        self.program_counter += 1;
-
-        let pc = self.program_counter;
-        let ps = self.processor_status as u16;
-        let pb = self.program_bank as u16;
-
-        if self.emulation_mode {
-            mode.store(self, pc);
-            self.set_flag(ProgramBreakInterruptFlag, true);
-            mode.store(self, ps);
-            self.set_flag(IRQDisableFlag, true);
-            self.program_counter = EMULATION_INTERRUPT_VECTOR;
-        } else {
-            mode.store(self, pb);
-            mode.store(self, pc);
-            mode.store(self, ps);
-            self.set_flag(IRQDisableFlag, true);
-            self.program_bank = 0;
-            self.program_counter = NATIVE_INTERRUPT_VECTOR;
-        }
-
-        self.set_flag(DecimalFlag, false);
+        panic!("brk unimplemented")
     }
 
     fn ora<T: Instruction>(&mut self, mode: Box<T>) {
-        let data = mode.load(self);
-        self.accumulator |= data;
-
-        let negative = if self.emulation_mode {
-            CPU::check_if_negative_u8(self.accumulator as u8)
-        } else {
-            CPU::check_if_negative_u16(self.accumulator)
-        };
-
-        self.set_flag(NegativeFlag, negative);
-        let is_zero = self.accumulator == 0;
-        self.set_flag(ZeroFlag, is_zero);
+        panic!("ora unimplemented")
     }
 
     fn cop<T: Instruction>(&mut self, mode: Box<T>) {
-        self.program_counter += 1;
-
-        let pc = self.program_counter;
-        let pb = self.program_bank as u16;
-        let ps = self.processor_status as u16;
-
-        self.set_flag(IRQDisableFlag, true);
-
-        if self.emulation_mode {
-            mode.store(self, pc);
-            self.program_counter = EMULATION_COPROCESSOR_VECTOR;
-        } else {
-            mode.store(self, pb);
-            mode.store(self, pc);
-            mode.store(self, ps);
-            self.program_bank = 0;
-            self.program_counter = NATIVE_COPROCESSOR_VECTOR;
-        }
-
-        self.set_flag(DecimalFlag, true);
+        panic!("cop unimplemented")
     }
 
     fn tsb<T: Instruction>(&mut self, mode: Box<T>) {
-        let data = mode.load(self);
-        let result = data | self.accumulator;
-        let is_zero = (data & self.accumulator) == 0;
-
-        mode.store(self, result);
-
-        self.set_flag(ZeroFlag, is_zero);
+        panic!("tsb unimplemented")
     }
 
     fn asl<T: Instruction>(&mut self, mode: Box<T>) {
-        let data = mode.load(self);
-
-        let is_carry = if self.emulation_mode {
-            CPU::check_if_negative_u8(data as u8)
-        } else {
-            CPU::check_if_negative_u16(data)
-        };
-
-        self.set_flag(CarryFlag, is_carry);
-
-        let result = data << 1;
-        mode.store(self, data);
+        panic!("asl unimplemented")
     }
 
     fn php<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("php unimplemented")
     }
 
     fn phd<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("phd unimplemented")
     }
 
     fn blp<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("blp unimplemented")
     }
 
     fn trb<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("trb unimplemented")
     }
 
     fn clc<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("clc unimplemented")
     }
 
     fn inc<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("inc unimplemented")
     }
 
     fn tcs<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("tcs unimplemented")
     }
 
     fn jsr<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("jsr unimplemented")
     }
 
     fn and<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("and unimplemented")
     }
 
     fn bit<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("bit unimplemented")
     }
 
     fn rol<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("rol unimplemented")
     }
 
     fn plp<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("plp unimplemented")
     }
 
     fn pld<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("pld unimplemented")
     }
 
     fn bmi<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("bmi unimplemented")
     }
 
     fn sec<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("sec unimplemented")
     }
 
     fn dec<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("dec unimplemented")
     }
 
     fn tsc<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("tsc unimplemented")
     }
 
     fn rti<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("rti unimplemented")
     }
 
     fn eor<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("eor unimplemented")
     }
 
     fn wdm(&mut self) {
+        panic!("wdm unimplemented")
     }
 
     fn mvp<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("mvp unimplemented")
     }
 
     fn lsr<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("lsr unimplemented")
     }
 
     fn pha<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("pha unimplemented")
     }
 
     fn phk<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("phk unimplemented")
     }
 
     fn jmp<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("jmp unimplemented")
     }
 
     fn bvc<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("bvc unimplemented")
     }
 
     fn mvn<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("mvn unimplemented")
     }
 
     fn cli<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("cli unimplemented")
     }
 
     fn phy<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("phy unimplemented")
     }
 
     fn tcd<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("tcd unimplemented")
     }
 
     fn rts<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("rts unimplemented")
     }
 
     fn adc<T: Instruction>(&mut self, mode: Box<T>) {
-        let data = mode.load(self);
-
-        let mut result: u32;
-        let mut overflow = false;
-        let acc = self.accumulator;
-        let orig_neg = (acc & 0x8000) >> 15 == 1;
-
-        if let Some(res) = data.checked_add(acc) {
-            result = res as u32;
-        } else {
-            result = data as u32 + acc as u32;
-            overflow = true;
-        }
-
-        if self.check_flag(CarryFlag) {
-            result += 1;
-            self.set_flag(CarryFlag, true);
-        }
-
-        self.accumulator = result as u16;
-
-        let negative = CPU::check_if_negative_u16(self.accumulator);
-
-        self.set_flag(NegativeFlag, negative);
-        self.set_flag(OverflowFlag, (!orig_neg && negative) || (overflow && negative));
-        self.set_flag(ZeroFlag, result == 0);
-        self.set_flag(CarryFlag, overflow);
+        panic!("adc unimplemented")
     }
 
     fn per<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("per unimplemented")
     }
 
     fn stz<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("stz unimplemented")
     }
 
     fn ror<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("ror unimplemented")
     }
 
     fn pla<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("pla unimplemented")
     }
 
     fn rtl<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("rtl unimplemented")
     }
 
     fn bvs<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("bvs unimplemented")
     }
 
     fn sei<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("sei unimplemented")
     }
 
     fn ply<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("ply unimplemented")
     }
 
     fn tdc<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("tdc unimplemented")
     }
 
     fn bra<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("bra unimplemented")
     }
 
     fn sta<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("sta unimplemeted")
     }
 
     fn brl<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("brl unimplemented")
     }
 
     fn sty<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("sty unimplemented")
     }
 
     fn stx<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("stx unimplemented")
     }
 
     fn dey<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("dey unimplemented")
     }
 
     fn txa<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("txa unimplemented")
     }
 
     fn phb<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("phb unimplemented")
     }
 
     fn bcc<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("bcc unimplemented")
     }
 
     fn tya<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("tya unimplemented")
     }
 
     fn txs<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("txs unimplemented")
     }
 
     fn txy<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("txy unimplemented")
     }
 
     fn ldy<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("ldy unimplemented")
     }
 
     fn lda<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("lda unimplemented")
     }
 
     fn ldx<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("ldx unimplemented")
     }
 
     fn tay<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("tay unimplemented")
     }
 
     fn tax<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("tax unimplemented")
     }
 
     fn plb<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("plb unimplemented")
     }
 
     fn bcs<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("bcs unimplemented")
     }
 
     fn clv<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("clv unimplemented")
     }
 
     fn tsx<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("tsx unimplemented")
     }
 
     fn tyx<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("tyx unimplemented")
     }
 
     fn cpy<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("cpy unimplemented")
     }
 
     fn cmp<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("cmp unimplemented")
     }
 
     fn rep<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("rep unimplemented")
     }
 
     fn iny<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("iny unimplemented")
     }
 
     fn dex<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("dex unimplemented")
     }
 
     fn wai<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("wai unimplemented")
     }
 
     fn bne<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("bne unimplemented")
     }
 
     fn pei<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("pei unimplemented")
     }
 
     fn cld<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("cld unimplemented")
     }
 
     fn phx<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("phx unimplemented")
     }
 
     fn stp<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("stp unimplemented")
     }
 
     fn cpx<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("cpx unimplemented")
     }
 
     fn sbc<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("sbc unimplemented")
     }
 
     fn inx<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("inx unimplemented")
     }
 
     fn nop<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("nop unimplemented")
     }
 
     fn xba<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("xba unimplemented")
     }
 
     fn beq<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("beq unimplemented")
     }
 
     fn pea<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("pea unimplemented")
     }
 
     fn sed<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("sed unimplemented")
     }
 
     fn plx<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("plx unimplemented")
     }
 
     fn xce<T: Instruction>(&mut self, mode: Box<T>) {
+        panic!("xce unimplemented")
     }
+}
+
+enum ProcessorStatus {
+    Negative = 0x80,
+    Overflow = 0x40,
+    Zero = 0x02,
+    Carry = 0x01,
+    Decimal = 0x08,
+    IRQDisable = 0x04,
+    IndexRegisterSize = 0x10,
+    AccumulatorRegisterSize = 0x20,
+    EmulationMode,
 }
 
