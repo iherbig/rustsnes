@@ -241,7 +241,8 @@ impl Instruction for DirectPageIndirectLongIndexedY {
 pub struct Immediate;
 impl Instruction for Immediate {
     fn load(&self, cpu: &mut CPU) -> usize {
-        panic!("Immediate load not implemented")
+        cpu.program_counter += 1;
+        cpu.memory.get_byte(cpu.program_counter) as usize
     }
 
     fn store(&self, cpu: &mut CPU, data: usize) {
@@ -333,11 +334,16 @@ impl Instruction for StackProgramCounterRelative {
 pub struct StackPull;
 impl Instruction for StackPull {
     fn load(&self, cpu: &mut CPU) -> usize {
-        panic!("StackPull load not implemented")
+        cpu.stack_pointer += 1;
+        let low = cpu.memory.get_byte(cpu.stack_pointer) as usize;
+        cpu.stack_pointer += 1;
+        let high = cpu.memory.get_byte(cpu.stack_pointer) as usize; 
+
+        (high << 8) | low
     }
 
     fn store(&self, cpu: &mut CPU, data: usize) {
-        panic!("StackPull store not implemented")
+        unreachable!("StackPull doesn't have a store")
     }
 }
 
@@ -348,7 +354,20 @@ impl Instruction for StackPush {
     }
 
     fn store(&self, cpu: &mut CPU, data: usize) {
-        panic!("StackPush store not implemented")
+        use super::cpu::StatusFlags::IndexRegisterSize;
+
+        if cpu.processor_status.status[IndexRegisterSize as usize] {
+            cpu.memory.set_byte(cpu.stack_pointer, data as u8);
+            cpu.stack_pointer -= 1;
+        } else {
+            let high = (data & 0xFF00) >> 8;
+            let low = data & 0x00FF;
+
+            cpu.memory.set_byte(cpu.stack_pointer, high as u8);
+            cpu.stack_pointer -= 1;
+            cpu.memory.set_byte(cpu.stack_pointer, low as u8);
+            cpu.stack_pointer -= 1;
+        }
     }
 }
 
