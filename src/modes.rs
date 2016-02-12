@@ -21,7 +21,23 @@ impl Instruction for Absolute {
     }
 
     fn store(&self, cpu: &mut CPU, data: usize) {
-        panic!("Absolute store not implemented")
+        let pc = cpu.program_counter + 1;
+
+        let low_addr = cpu.memory.get_byte(pc) as usize;
+        let high_addr = cpu.memory.get_byte(pc + 1) as usize;
+        let addr = (high_addr << 8) | low_addr;
+
+        if cpu.processor_status.inst_8_bit {
+            cpu.memory.set_byte(addr, data as u8);
+        } else {
+            let high = (data & 0xFF00) >> 8;
+            let low = data & 0x00FF;
+
+            cpu.memory.set_byte(addr, low as u8);
+            cpu.memory.set_byte(addr + 1, high as u8);
+        }
+
+        cpu.program_counter += 2;
     }
 }
 
@@ -334,12 +350,17 @@ impl Instruction for StackProgramCounterRelative {
 pub struct StackPull;
 impl Instruction for StackPull {
     fn load(&self, cpu: &mut CPU) -> usize {
-        cpu.stack_pointer += 1;
-        let low = cpu.memory.get_byte(cpu.stack_pointer) as usize;
-        cpu.stack_pointer += 1;
-        let high = cpu.memory.get_byte(cpu.stack_pointer) as usize; 
+        if cpu.processor_status.inst_8_bit {
+            cpu.stack_pointer += 1;
+            cpu.memory.get_byte(cpu.stack_pointer) as usize
+        } else {
+            cpu.stack_pointer += 1;
+            let low = cpu.memory.get_byte(cpu.stack_pointer) as usize;
+            cpu.stack_pointer += 1;
+            let high = cpu.memory.get_byte(cpu.stack_pointer) as usize; 
 
-        (high << 8) | low
+            (high << 8) | low
+        }
     }
 
     fn store(&self, cpu: &mut CPU, data: usize) {
@@ -350,13 +371,11 @@ impl Instruction for StackPull {
 pub struct StackPush;
 impl Instruction for StackPush {
     fn load(&self, cpu: &mut CPU) -> usize {
-        panic!("StackPush load not implemented")
+        unreachable!("StackPush doesn't have a load")
     }
 
     fn store(&self, cpu: &mut CPU, data: usize) {
-        use super::cpu::StatusFlags::IndexRegisterSize;
-
-        if cpu.processor_status.status[IndexRegisterSize as usize] {
+        if cpu.processor_status.inst_8_bit {
             cpu.memory.set_byte(cpu.stack_pointer, data as u8);
             cpu.stack_pointer -= 1;
         } else {

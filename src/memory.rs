@@ -306,8 +306,6 @@ impl Memory {
         let bank = (addr_offset & 0xFF0000) >> 16;
         let offset = addr_offset & 0xFFFF;
 
-        println!("header_offset {:x} addr_offset {:x} bank {:x} offset {:x}", header_offset, addr_offset, bank, offset);
-
         match self.rom.rom_type {
             LoROM | FastLoROM => {
                 match bank {

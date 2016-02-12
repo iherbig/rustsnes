@@ -1194,7 +1194,21 @@ impl CPU {
     }
 
     fn pha<T: Instruction>(&mut self, mode: Box<T>) {
-        panic!("pha unimplemented")
+        use self::StatusFlags::AccumulatorRegisterSize;
+
+        let mut data = self.emu_acc as usize;
+        self.processor_status.inst_8_bit = true;
+
+        if !self.processor_status.status[AccumulatorRegisterSize as usize] {
+            data = self.accumulator as usize;
+            self.processor_status.inst_8_bit = false;
+        }
+
+        mode.store(self, data);
+
+        self.processor_status.inst_8_bit = false;
+
+        self.program_counter += 1;
     }
 
     fn phk<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1271,7 +1285,13 @@ impl CPU {
     }
 
     fn tdc(&mut self) {
-        panic!("tdc unimplemented")
+        use self::StatusFlags::{Negative, Zero};
+        self.accumulator = self.direct_page;
+
+        self.processor_status.set_flag(Negative, self.accumulator & 0x8000 != 0);
+        self.processor_status.set_flag(Zero, self.accumulator == 0);
+
+        self.program_counter += 1;
     }
 
     fn bra<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1279,7 +1299,20 @@ impl CPU {
     }
 
     fn sta<T: Instruction>(&mut self, mode: Box<T>) {
-        panic!("sta unimplemeted")
+        use self::StatusFlags::AccumulatorRegisterSize;
+
+        let mut data = self.emu_acc as usize;
+        self.processor_status.inst_8_bit = true;
+
+        if !self.processor_status.status[AccumulatorRegisterSize as usize] {
+            data = self.accumulator as usize;
+            self.processor_status.inst_8_bit = false;
+        }
+
+        mode.store(self, data);
+        self.processor_status.inst_8_bit = false;
+
+        self.program_counter += 1;
     }
 
     fn brl<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1339,17 +1372,44 @@ impl CPU {
     }
 
     fn lda<T: Instruction>(&mut self, mode: Box<T>) {
-        panic!("lda unimplemented")
+        use self::StatusFlags::{AccumulatorRegisterSize, Zero};
+
+        if self.processor_status.status[AccumulatorRegisterSize as usize] {
+            let data = mode.load(self);
+
+            self.emu_acc = data as u8;
+            self.accumulator = data as u16;
+
+            self.processor_status.set_by_byte(self.emulation_mode, (data as u8) & 0x80, true);
+            if data == 0 {
+                self.processor_status.set_by_byte(self.emulation_mode, 1 << (Zero as usize), true);
+            }
+        } else {
+            let low = mode.load(self) as usize;
+            let high = mode.load(self) as usize;
+
+            let data = (high << 8) | low;
+
+            self.accumulator = data as u16;
+            self.emu_acc = (data & 0xFF) as u8;
+
+            self.processor_status.set_by_byte(self.emulation_mode, ((data & 0x8000) >> 8) as u8, true);
+            if data == 0 {
+                self.processor_status.set_by_byte(self.emulation_mode, 1 << (Zero as usize), true);
+            }
+        }
+        
+        self.program_counter += 1;
     }
 
     fn ldx<T: Instruction>(&mut self, mode: Box<T>) {
-        use self::StatusFlags::IndexRegisterSize;
-        use self::StatusFlags::Zero;
+        use self::StatusFlags::{IndexRegisterSize, Zero};
 
-        if self.processor_status.status[IndexRegisterSize as usize] == true {
+        if self.processor_status.status[IndexRegisterSize as usize] {
             let data = mode.load(self);
 
             self.emu_index_x = data as u8;
+            self.index_x = data as u16;
 
             self.processor_status.set_by_byte(self.emulation_mode, (data as u8) & 0x80, true);
             if data == 0 {
@@ -1362,6 +1422,7 @@ impl CPU {
             let data = (high << 8) | low;
 
             self.index_x = data as u16;
+            self.emu_index_x = (data & 0xFF) as u8;
 
             self.processor_status.set_by_byte(self.emulation_mode, ((data & 0x8000) >> 8) as u8, true);
             if data == 0 {
@@ -1381,7 +1442,19 @@ impl CPU {
     }
 
     fn plb<T: Instruction>(&mut self, mode: Box<T>) {
-        panic!("plb unimplemented")
+        use self::StatusFlags::{Negative, Zero};
+
+        self.processor_status.inst_8_bit = true;
+
+        let data = mode.load(self) as u8;
+        self.data_bank = data;
+
+        self.processor_status.inst_8_bit = false;
+
+        self.processor_status.set_flag(Negative, data & 0x80 != 0);
+        self.processor_status.set_flag(Zero, data == 0);
+
+        self.program_counter += 1;
     }
 
     fn bcs<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1442,13 +1515,17 @@ impl CPU {
     fn phx<T: Instruction>(&mut self, mode: Box<T>) {
         use self::StatusFlags::IndexRegisterSize;
 
-        if self.processor_status.status[IndexRegisterSize as usize] {
-            let xreg = self.emu_index_x as usize;
-            mode.store(self, xreg);
-        } else {
-            let xreg = self.index_x as usize;
-            mode.store(self, xreg);
+        let mut xreg = self.emu_index_x as usize;
+        self.processor_status.inst_8_bit = true;
+
+        if !self.processor_status.status[IndexRegisterSize as usize] {
+            xreg = self.index_x as usize;
+            self.processor_status.inst_8_bit = false;
         }
+
+        mode.store(self, xreg);
+
+        self.processor_status.inst_8_bit = false;
 
         self.program_counter += 1;
     }
@@ -1513,6 +1590,7 @@ impl CPU {
 #[derive(Default, Debug)]
 pub struct ProcessorStatus {
     pub status: [bool; 8],
+    pub inst_8_bit: bool,
 }
 
 impl ProcessorStatus {
