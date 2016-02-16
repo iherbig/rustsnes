@@ -57,7 +57,7 @@ impl Instruction for Absolute {
     }
 
     fn store(&self, cpu: &mut CPU, is_byte: bool, data: usize) {
-        let mut addr = cpu.program_counter;
+        let mut addr = (cpu.program_bank << 16) | cpu.program_counter;
         let bank = match self.instruction_type {
             InstructionType::LocatingData => cpu.data_bank,
             InstructionType::ControlTransfer => cpu.program_bank,
@@ -133,7 +133,7 @@ impl Instruction for AbsoluteIndirectLong {
 pub struct AbsoluteLong;
 impl Instruction for AbsoluteLong {
     fn load(&self, cpu: &mut CPU, is_byte: bool) -> usize {
-        let addr = cpu.program_counter;
+        let addr = (cpu.program_bank << 16) + cpu.program_counter;
         cpu.program_counter += 3;
 
         load_three_bytes(cpu, addr) as usize
@@ -268,7 +268,7 @@ impl Instruction for DirectPageIndirectLongIndexedY {
 pub struct Immediate;
 impl Instruction for Immediate {
     fn load(&self, cpu: &mut CPU, is_byte: bool) -> usize {
-        let addr = cpu.program_counter;
+        let addr = (cpu.program_bank << 16) + cpu.program_counter;
 
         if is_byte {
             cpu.program_counter += 1;
@@ -353,7 +353,7 @@ impl Instruction for StackProgramCounterRelative {
 pub struct StackPull;
 impl Instruction for StackPull {
     fn load(&self, cpu: &mut CPU, is_byte: bool) -> usize {
-        let addr = cpu.stack_pointer;
+        let addr = (cpu.program_bank << 16) + cpu.stack_pointer;
 
         if is_byte {
             cpu.stack_pointer += 1;
@@ -376,7 +376,7 @@ impl Instruction for StackPush {
     }
 
     fn store(&self, cpu: &mut CPU, is_byte: bool, data: usize) {
-        let addr = cpu.stack_pointer;
+        let addr = (cpu.program_bank << 16) + cpu.stack_pointer;
 
         if is_byte {
             store_byte(cpu, addr, data as u8);
