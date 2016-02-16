@@ -354,7 +354,7 @@ impl Instruction for StackProgramCounterRelative {
 pub struct StackPull;
 impl Instruction for StackPull {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        let addr = (cpu.program_bank << 16) + cpu.stack_pointer;
+        let addr = cpu.stack_pointer;
 
         if is_byte {
             cpu.stack_pointer += 1;
@@ -377,7 +377,7 @@ impl Instruction for StackPush {
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
-        let addr = (cpu.program_bank << 16) + cpu.stack_pointer;
+        let addr = cpu.stack_pointer;
 
         if is_byte {
             store_byte(memory, addr, data as u8);

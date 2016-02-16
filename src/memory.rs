@@ -396,13 +396,7 @@ impl Memory {
                                 panic!("Reserved memory {:x}", addr)
                             },
                             0x8000 ... 0xFFFF => {
-                                let tmp_bank = if bank_header >= 0x80 {
-                                    bank_header - 0x80
-                                } else {
-                                    bank_header
-                                };
-
-                                self.rom.data[(tmp_bank << 16) | offset_header - 0x8000] = data;
+                                panic!("Cannot write to ROM {:x}", addr)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -413,13 +407,7 @@ impl Memory {
                                 unreachable!("Invalid address {:x}", addr)
                             },
                             0x8000 ... 0xFFFF => {
-                                let tmp_bank = if bank_header >= 0xC0 {
-                                    bank_header - 0x80
-                                } else {
-                                    bank_header
-                                };
-
-                                self.rom.data[(tmp_bank * 0x8000) + (offset_header - 0x8000)] = data;
+                                panic!("Cannot write to ROM {:x}", addr)
                             },
                             _ => unreachable!("Invalid address {:x}", addr)
                         }
@@ -460,7 +448,7 @@ impl Memory {
                                 panic!("SRAM {:x}", addr)
                             },
                             0x8000 ... 0xFFFF => {
-                                self.rom.data[(bank_header * 0x8000) + (offset_header - 0x8000)] = data;
+                                panic!("Cannot write to ROM {:x}", addr)
                             },
                             _ => unreachable!("Invalid address {:x}", addr)
                         }
@@ -503,13 +491,7 @@ impl Memory {
                                 panic!("Reserved {:x}", addr)
                             },
                             0x8000 ... 0xFFFF => {
-                                let tmp_bank = if bank_header >= 0x80 {
-                                    bank_header - 0x80
-                                } else {
-                                    bank_header
-                                };
-
-                                self.rom.data[(tmp_bank << 16) + offset_header] = data;
+                                panic!("Cannot write to ROM {:x}", addr)
                             },
                             _ => unreachable!("Invalid address {:x}", addr)
                         }
@@ -547,13 +529,7 @@ impl Memory {
                                 panic!("SRAM {:x}", addr)
                             },
                             0x8000 ... 0xFFFF => {
-                                let tmp_bank = if bank_header >= 0xA0 {
-                                    bank_header - 0x80
-                                } else {
-                                    bank_header
-                                };
-
-                                self.rom.data[(tmp_bank << 16) + offset_header] = data;
+                                panic!("Cannot write to ROM {:x}", addr)
                             },
                             _ => unreachable!("Invalid address {:x}", addr)
                         }
@@ -561,13 +537,7 @@ impl Memory {
                     0x40 ... 0x7D | 0xC0 ... 0xFD => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                let tmp_bank = if bank_header >= 0xC0 {
-                                    bank_header - 0xC0
-                                } else {
-                                    bank_header - 0x40
-                                };
-
-                                self.rom.data[(tmp_bank << 16) + offset_header] = data;
+                                panic!("Cannot write to ROM {:x}", addr)
                             },
                             _ => unreachable!("Invalid address {:x}", addr)
                         }
@@ -597,8 +567,7 @@ impl Memory {
                     0xFE ... 0xFF => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                let tmp_bank = bank_header - 0xC0;
-                                self.rom.data[(tmp_bank << 16) + offset_header] = data;
+                                panic!("Cannot write to ROM {:x}", addr)
                             },
                             _ => unreachable!("Invalid address {:x}", addr)
                         }
