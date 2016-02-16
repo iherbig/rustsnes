@@ -5,9 +5,10 @@ use std::fs::File;
 use std::path::Path;
 use std::io::Read;
 
-pub mod cpu;
+mod cpu;
 mod memory;
 mod modes;
+mod snes;
 
 fn main() {
     let rom = { 
@@ -16,8 +17,10 @@ fn main() {
     };
 
     let mem = memory::Memory::new(rom);
-    let mut cpu = cpu::CPU::new(mem);
-    cpu.run();
+    let cpu = cpu::CPU::new(&mem);
+    let mut snes = snes::SNES::new(cpu, mem);
+
+    snes.run();
 }
 
 fn read_bin<P: AsRef<Path>>(rom_name: P) -> Vec<u8> {
