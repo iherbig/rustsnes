@@ -1,4 +1,4 @@
-use memory::{Memory, LOROM_EMU_MODE_VECTORS, HIROM_EMU_MODE_VECTORS};
+use memory::Memory;
 use modes::*;
 use modes::InstructionType::*;
 
@@ -895,7 +895,7 @@ macro_rules! decode_op_and_execute {
             },
             0xE4 => {
                 let mode = Box::new(DirectPage);
-                $this.inx(mode);
+                $this.cpx(mode);
             },
             0xE5 => {
                 let mode = Box::new(DirectPage);
@@ -910,8 +910,7 @@ macro_rules! decode_op_and_execute {
                 $this.sbc(mode);
             },
             0xE8 => {
-                let mode = Box::new(Dummy);
-                $this.inx(mode);
+                $this.inx();
             },
             0xE9 => {
                 let mode = Box::new(Immediate);
@@ -1008,53 +1007,35 @@ macro_rules! decode_op_and_execute {
 
 #[derive(Debug)]
 pub struct CPU {
-    emu_acc:                u8,
-    accumulator:           u16,
-    emu_index_x:            u8,
-    index_x:               u16,
-    index_y:               u16,
-    pub stack_pointer:         usize,
-    pub data_bank:          u8,
-    pub direct_page:       u16,
-    pub program_bank:       usize,
+    accumulator:                        u16,
+    index_x:                            u16,
+    index_y:                            u16,
+    pub stack_pointer:                usize,
+    pub data_bank:                    usize,
+    pub direct_page:                  usize,
+    pub program_bank:                 usize,
     pub processor_status:   ProcessorStatus,
-    pub program_counter: usize,
-    emulation_mode:       bool,
-    pub memory:         Memory,
+    pub program_counter:              usize,
+    emulation_mode:                    bool,
+    pub memory:                      Memory,
 }
 
 impl CPU {
 	pub fn new(memory: Memory) -> CPU {
-        use memory::Vectors::*;
-        use memory::RomType::*;
-
-        let pc = match memory.rom.rom_type {
-            LoROM | FastLoROM => {
-                let vector_loc = LOROM_EMU_MODE_VECTORS[RESET as usize];
-                memory.get_byte(vector_loc) as usize |
-                    ((memory.get_byte(vector_loc + 1) as usize) << 8)
-            },
-            HiROM | FastHiROM => {
-                let vector_loc = HIROM_EMU_MODE_VECTORS[RESET as usize];
-                memory.get_byte(vector_loc) as usize | ((memory.get_byte(vector_loc + 1) as usize) << 8)
-            },
-            _ => panic!("ExLo/HiROM formats not supported")
-        };
+        let pc = memory.rom.reset_vector;
 
         CPU {
-            emu_acc:           0,
-            accumulator:       0,
-            emu_index_x:       0,
-            index_x:           0,
-            index_y:           0,
-            stack_pointer:     0,
-            data_bank:         0,
-            direct_page:       0,
-            program_bank:      0,
-            processor_status:  ProcessorStatus::default(),
-            program_counter:   pc,
-            emulation_mode: true,
-            memory:       memory,
+            accumulator:                         0,
+            index_x:                             0,
+            index_y:                             0,
+            stack_pointer:                       0,
+            data_bank:                           0,
+            direct_page:                         0,
+            program_bank:                        0,
+            processor_status:   Default::default(),
+            program_counter:                    pc,
+            emulation_mode:                   true,
+            memory:                         memory,
         }
 	}
 
@@ -1068,6 +1049,8 @@ impl CPU {
     fn run_instruction(&mut self) {
         let opcode = self.memory.get_byte((self.program_bank << 16) | self.program_counter);
         println!("opcode {:x}", opcode);
+
+        self.program_counter += 1;
         decode_op_and_execute!(opcode, self);
     }
 
@@ -1111,7 +1094,6 @@ impl CPU {
         use self::StatusFlags::Carry;
 
         self.processor_status.set_flag(Carry, false);
-        self.program_counter += 1;
     }
 
     fn inc<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1143,18 +1125,13 @@ impl CPU {
     }
 
     fn pld<T: Instruction>(&mut self, mode: Box<T>) {
-        use self::StatusFlags::Zero;
+        use self::StatusFlags::{Zero, Negative};
 
-        let data = mode.load(self);
+        let data = mode.load(self, false);
+        self.direct_page = data;
 
-        self.direct_page = data as u16;
-
-        self.processor_status.set_by_byte(self.emulation_mode, ((data & 0x8000) >> 8) as u8, true);
-        if data == 0 {
-            self.processor_status.set_by_byte(self.emulation_mode, 1 << (Zero as usize), true);
-        }
-
-        self.program_counter += 1;
+        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, self.direct_page == 0);
     }
 
     fn bmi<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1196,19 +1173,10 @@ impl CPU {
     fn pha<T: Instruction>(&mut self, mode: Box<T>) {
         use self::StatusFlags::AccumulatorRegisterSize;
 
-        let mut data = self.emu_acc as usize;
-        self.processor_status.inst_8_bit = true;
+        let data = self.accumulator as usize;
 
-        if !self.processor_status.status[AccumulatorRegisterSize as usize] {
-            data = self.accumulator as usize;
-            self.processor_status.inst_8_bit = false;
-        }
-
-        mode.store(self, data);
-
-        self.processor_status.inst_8_bit = false;
-
-        self.program_counter += 1;
+        let emu = self.processor_status.status[AccumulatorRegisterSize as usize];
+        mode.store(self, emu, data);
     }
 
     fn phk<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1216,7 +1184,7 @@ impl CPU {
     }
 
     fn jmp<T: Instruction>(&mut self, mode: Box<T>) {
-        let jump_addr = mode.load(self) as usize;
+        let jump_addr = mode.load(self, false) as usize;
         self.program_counter = jump_addr & 0x00FFFF;
         self.program_bank = (jump_addr & 0xFF0000) >> 16;
     }
@@ -1277,7 +1245,6 @@ impl CPU {
         use self::StatusFlags::IRQDisable;
 
         self.processor_status.set_flag(IRQDisable, true);
-        self.program_counter += 1;
     }
 
     fn ply<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1286,12 +1253,11 @@ impl CPU {
 
     fn tdc(&mut self) {
         use self::StatusFlags::{Negative, Zero};
-        self.accumulator = self.direct_page;
+        let data = self.direct_page;
+        self.accumulator = self.direct_page as u16;
 
-        self.processor_status.set_flag(Negative, self.accumulator & 0x8000 != 0);
+        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
         self.processor_status.set_flag(Zero, self.accumulator == 0);
-
-        self.program_counter += 1;
     }
 
     fn bra<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1301,18 +1267,10 @@ impl CPU {
     fn sta<T: Instruction>(&mut self, mode: Box<T>) {
         use self::StatusFlags::AccumulatorRegisterSize;
 
-        let mut data = self.emu_acc as usize;
-        self.processor_status.inst_8_bit = true;
+        let data = self.accumulator as usize;
 
-        if !self.processor_status.status[AccumulatorRegisterSize as usize] {
-            data = self.accumulator as usize;
-            self.processor_status.inst_8_bit = false;
-        }
-
-        mode.store(self, data);
-        self.processor_status.inst_8_bit = false;
-
-        self.program_counter += 1;
+        let emu = self.processor_status.status[AccumulatorRegisterSize as usize];
+        mode.store(self, emu, data);
     }
 
     fn brl<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1350,17 +1308,11 @@ impl CPU {
     fn txs(&mut self) {
         use self::StatusFlags::IndexRegisterSize;
 
-        if self.emulation_mode {
-            self.stack_pointer = self.emu_index_x as usize;
+        if self.emulation_mode || self.processor_status.status[IndexRegisterSize as usize] {
+            self.stack_pointer = (0xFF & self.index_x) as usize;
         } else {
-            if self.processor_status.status[IndexRegisterSize as usize] {
-                self.stack_pointer = 0x00FF & (self.emu_index_x as usize);
-            } else {
-                self.stack_pointer = self.index_x as usize;
-            }
+            self.stack_pointer = self.index_x as usize;
         }
-
-        self.program_counter += 1;
     }
 
     fn txy(&mut self) {
@@ -1372,65 +1324,25 @@ impl CPU {
     }
 
     fn lda<T: Instruction>(&mut self, mode: Box<T>) {
-        use self::StatusFlags::{AccumulatorRegisterSize, Zero};
+        use self::StatusFlags::{AccumulatorRegisterSize, Negative, Zero};
 
-        if self.processor_status.status[AccumulatorRegisterSize as usize] {
-            let data = mode.load(self);
-
-            self.emu_acc = data as u8;
-            self.accumulator = data as u16;
-
-            self.processor_status.set_by_byte(self.emulation_mode, (data as u8) & 0x80, true);
-            if data == 0 {
-                self.processor_status.set_by_byte(self.emulation_mode, 1 << (Zero as usize), true);
-            }
-        } else {
-            let low = mode.load(self) as usize;
-            let high = mode.load(self) as usize;
-
-            let data = (high << 8) | low;
-
-            self.accumulator = data as u16;
-            self.emu_acc = (data & 0xFF) as u8;
-
-            self.processor_status.set_by_byte(self.emulation_mode, ((data & 0x8000) >> 8) as u8, true);
-            if data == 0 {
-                self.processor_status.set_by_byte(self.emulation_mode, 1 << (Zero as usize), true);
-            }
-        }
+        let emu = self.processor_status.status[AccumulatorRegisterSize as usize];
+        let data = mode.load(self, emu);
+        self.accumulator = data as u16;
         
-        self.program_counter += 1;
+        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, self.accumulator == 0);
     }
 
     fn ldx<T: Instruction>(&mut self, mode: Box<T>) {
-        use self::StatusFlags::{IndexRegisterSize, Zero};
+        use self::StatusFlags::{IndexRegisterSize, Zero, Negative};
 
-        if self.processor_status.status[IndexRegisterSize as usize] {
-            let data = mode.load(self);
+        let emu = self.processor_status.status[IndexRegisterSize as usize];
+        let data = mode.load(self, emu);
+        self.index_x = data as u16;
 
-            self.emu_index_x = data as u8;
-            self.index_x = data as u16;
-
-            self.processor_status.set_by_byte(self.emulation_mode, (data as u8) & 0x80, true);
-            if data == 0 {
-                self.processor_status.set_by_byte(self.emulation_mode, 1 << (Zero as usize), true);
-            }
-        } else {
-            let low = mode.load(self) as usize;
-            let high = mode.load(self) as usize;
-
-            let data = (high << 8) | low;
-
-            self.index_x = data as u16;
-            self.emu_index_x = (data & 0xFF) as u8;
-
-            self.processor_status.set_by_byte(self.emulation_mode, ((data & 0x8000) >> 8) as u8, true);
-            if data == 0 {
-                self.processor_status.set_by_byte(self.emulation_mode, 1 << (Zero as usize), true);
-            }
-        }
-        
-        self.program_counter += 1;
+        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, self.index_x == 0);
     }
 
     fn tay(&mut self) {
@@ -1444,17 +1356,11 @@ impl CPU {
     fn plb<T: Instruction>(&mut self, mode: Box<T>) {
         use self::StatusFlags::{Negative, Zero};
 
-        self.processor_status.inst_8_bit = true;
-
-        let data = mode.load(self) as u8;
+        let data = mode.load(self, true);
         self.data_bank = data;
 
-        self.processor_status.inst_8_bit = false;
-
-        self.processor_status.set_flag(Negative, data & 0x80 != 0);
-        self.processor_status.set_flag(Zero, data == 0);
-
-        self.program_counter += 1;
+        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, self.data_bank == 0);
     }
 
     fn bcs<T: Instruction>(&mut self, mode: Box<T>) {
@@ -1482,10 +1388,9 @@ impl CPU {
     }
 
     fn rep<T: Instruction>(&mut self, mode: Box<T>) {
-        let val = mode.load(self);
+        let val = mode.load(self, true);
 
         self.processor_status.set_by_byte(self.emulation_mode, val as u8, false);
-        self.program_counter += 1;
     }
 
     fn iny(&mut self) {
@@ -1515,19 +1420,10 @@ impl CPU {
     fn phx<T: Instruction>(&mut self, mode: Box<T>) {
         use self::StatusFlags::IndexRegisterSize;
 
-        let mut xreg = self.emu_index_x as usize;
-        self.processor_status.inst_8_bit = true;
+        let data = self.index_x as usize;
 
-        if !self.processor_status.status[IndexRegisterSize as usize] {
-            xreg = self.index_x as usize;
-            self.processor_status.inst_8_bit = false;
-        }
-
-        mode.store(self, xreg);
-
-        self.processor_status.inst_8_bit = false;
-
-        self.program_counter += 1;
+        let emu = self.processor_status.status[IndexRegisterSize as usize];
+        mode.store(self, emu, data);
     }
 
     fn stp(&mut self) {
@@ -1542,7 +1438,7 @@ impl CPU {
         panic!("sbc unimplemented")
     }
 
-    fn inx<T: Instruction>(&mut self, mode: Box<T>) {
+    fn inx(&mut self) {
         panic!("inx unimplemented")
     }
 
@@ -1572,25 +1468,22 @@ impl CPU {
 
     fn xce(&mut self) {
         use self::StatusFlags::Carry;
-        let emu_bit = self.emulation_mode;
 
+        let emu_bit = self.emulation_mode;
         self.emulation_mode = self.processor_status.status[Carry as usize];
         self.processor_status.status[Carry as usize] = emu_bit;
-        self.program_counter += 1;
     }
 
     fn sep<T: Instruction>(&mut self, mode: Box<T>) {
-        let val = mode.load(self);
+        let val = mode.load(self, true);
         
         self.processor_status.set_by_byte(self.emulation_mode, val as u8, true);
-        self.program_counter += 1;
     }
 }
 
 #[derive(Default, Debug)]
 pub struct ProcessorStatus {
     pub status: [bool; 8],
-    pub inst_8_bit: bool,
 }
 
 impl ProcessorStatus {

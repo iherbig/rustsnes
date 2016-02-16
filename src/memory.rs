@@ -116,8 +116,11 @@ impl Memory {
                             0x4500 ... 0x5FFF => {
                                 unreachable!("Invalid address {:x}", addr_offset)
                             },
-                            0x6000 ... 0xFFFF => {
-                                self.rom.data[(0x8000 * if bank >= 0x80 { bank - 0x80 } else { bank }) + offset]
+                            0x6000 ... 0x7FFF => {
+                                panic!("Reserved memory {:x}", addr_offset)
+                            },
+                            0x8000 ... 0xFFFF => {
+                                panic!("LoROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -128,7 +131,7 @@ impl Memory {
                                 unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x8000 ... 0xFFFF => {
-                                self.rom.data[(0x8000 * if bank >= 0xC0 { bank - 0x80 } else { bank }) + offset]
+                                panic!("LoROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -136,7 +139,7 @@ impl Memory {
                     0x70 ... 0x7D | 0xF0 ... 0xFD => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                self.rom.data[(0x8000 * if bank >= 0xF0 { bank - 0x80 } else { bank }) + offset]
+                                panic!("SRAM {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -165,8 +168,11 @@ impl Memory {
                     },
                     0xFE ... 0xFF => {
                         match offset {
-                            0x0000 ... 0xFFFF => {
-                                self.rom.data[(bank << 16) + offset]
+                            0x0000 ... 0x7FFF => {
+                                panic!("SRAM {:x}", addr_offset)
+                            },
+                            0x8000 ... 0xFFFF => {
+                                panic!("LoROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -179,7 +185,7 @@ impl Memory {
                     0x00 ... 0x1F | 0x80 ... 0x9F => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                    self.rom.data[addr_offset]
+                                panic!("LowRAM, shadowed from bank 0x7E {:x}", addr_offset)
                             },
                             0x2000 ... 0x20FF => {
                                 unreachable!("Invalid address {:x}", addr_offset)
@@ -205,8 +211,11 @@ impl Memory {
                             0x4500 ... 0x5FFF => {
                                 unreachable!("Invalid address {:x}", addr_offset)
                             },
-                            0x6000 ... 0xFFFF => {
-                                self.rom.data[((if bank >= 0x80 { bank - 0x80 } else { bank }) << 16) + offset]
+                            0x6000 ... 0x7FFF => {
+                                panic!("Reserved {:x}", addr_offset)
+                            },
+                            0x8000 ... 0xFFFF => {
+                                panic!("HiROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -241,10 +250,10 @@ impl Memory {
                                 unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x6000 ... 0x7FFF => {
-                                self.sram[((if bank >= 0xA0 { bank - 0x80 - 0x20 } else { bank - 0x20 }) << 16) + offset]
+                                panic!("SRAM {:x}", addr_offset)
                             },
                             0x8000 ... 0xFFFF => {
-                                self.rom.data[((if bank >= 0xA0 { bank - 0x80 } else { bank }) << 16) + offset]
+                                panic!("HiROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -252,7 +261,7 @@ impl Memory {
                     0x40 ... 0x7D | 0xC0 ... 0xFD => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                self.rom.data[(((if bank >= 0xC0 { bank - 0x80 - 0x40 } else { bank - 0x40})) * 0x8000) + offset]
+                                panic!("HiROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -282,7 +291,7 @@ impl Memory {
                     0xFE ... 0xFF => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                self.rom.data[(bank << 16) + offset]
+                                panic!("HiROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -305,6 +314,9 @@ impl Memory {
         let addr_offset = addr + header_offset;
         let bank = (addr_offset & 0xFF0000) >> 16;
         let offset = addr_offset & 0xFFFF;
+
+        println!("h_offset: {:x} addr_offset: {:x} bank {:x} offset {:x}",
+                 header_offset, addr_offset, bank, offset);
 
         match self.rom.rom_type {
             LoROM | FastLoROM => {
@@ -338,8 +350,11 @@ impl Memory {
                             0x4500 ... 0x5FFF => {
                                 unreachable!("Invalid address {:x}", addr_offset)
                             },
-                            0x6000 ... 0xFFFF => {
-                                self.rom.data[(0x8000 * if bank >= 0x80 { bank - 0x80 } else { bank }) + offset] = data;
+                            0x6000 ... 0x7FFF => {
+                                panic!("Reserved memory {:x}", addr_offset)
+                            },
+                            0x8000 ... 0xFFFF => {
+                                panic!("LoROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -350,7 +365,7 @@ impl Memory {
                                 unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x8000 ... 0xFFFF => {
-                                self.rom.data[(0x8000 * if bank >= 0xC0 { bank - 0x80 } else { bank }) + offset] = data;
+                                panic!("LoROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -358,7 +373,7 @@ impl Memory {
                     0x70 ... 0x7D | 0xF0 ... 0xFD => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                self.rom.data[(0x8000 * if bank >= 0xF0 { bank - 0x80 } else { bank }) + offset] = data;
+                                panic!("SRAM {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -387,8 +402,11 @@ impl Memory {
                     },
                     0xFE ... 0xFF => {
                         match offset {
-                            0x0000 ... 0xFFFF => {
-                                self.rom.data[(bank << 16) + offset] = data;
+                            0x0000 ... 0x7FFF => {
+                                panic!("SRAM {:x}", addr_offset)
+                            },
+                            0x8000 ... 0xFFFF => {
+                                panic!("LoROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -401,7 +419,7 @@ impl Memory {
                     0x00 ... 0x1F | 0x80 ... 0x9F => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                    self.rom.data[addr_offset] = data;
+                                panic!("LowRAM, shadowed from bank 0x7E {:x}", addr_offset)
                             },
                             0x2000 ... 0x20FF => {
                                 unreachable!("Invalid address {:x}", addr_offset)
@@ -427,8 +445,11 @@ impl Memory {
                             0x4500 ... 0x5FFF => {
                                 unreachable!("Invalid address {:x}", addr_offset)
                             },
-                            0x6000 ... 0xFFFF => {
-                                self.rom.data[((if bank >= 0x80 { bank - 0x80 } else { bank }) << 16) + offset] = data;
+                            0x6000 ... 0x7FFF => {
+                                panic!("Reserved {:x}", addr_offset)
+                            },
+                            0x8000 ... 0xFFFF => {
+                                panic!("HiROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -463,10 +484,10 @@ impl Memory {
                                 unreachable!("Invalid address {:x}", addr_offset)
                             },
                             0x6000 ... 0x7FFF => {
-                                self.sram[((if bank >= 0xA0 { bank - 0x80 - 0x20 } else { bank - 0x20 }) << 16) + offset] = data;
+                                panic!("SRAM {:x}", addr_offset)
                             },
                             0x8000 ... 0xFFFF => {
-                                self.rom.data[((if bank >= 0xA0 { bank - 0x80 } else { bank }) << 16) + offset] = data;
+                                panic!("HiROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -474,7 +495,7 @@ impl Memory {
                     0x40 ... 0x7D | 0xC0 ... 0xFD => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                self.rom.data[(((if bank >= 0xC0 { bank - 0x80 - 0x40 } else { bank - 0x40})) * 0x8000) + offset] = data;
+                                panic!("HiROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -504,7 +525,7 @@ impl Memory {
                     0xFE ... 0xFF => {
                         match offset {
                             0x0000 ... 0xFFFF => {
-                                self.rom.data[(bank << 16) + offset] = data;
+                                panic!("HiROM section {:x}", addr_offset)
                             },
                             _ => unreachable!("Invalid address {:x}", addr_offset)
                         }
@@ -520,7 +541,6 @@ impl Memory {
             },
         }
     }
-
 }
 
 pub struct Rom {
@@ -528,18 +548,36 @@ pub struct Rom {
     pub rom_type: RomType,
     rom_name: String,
     pub headered: bool,
+    pub reset_vector: usize,
 }
 
 impl Rom {
     fn new(rom: Vec<u8>) -> Rom {
+        use self::RomType::*;
+
         let headered = rom.len() % 1024 == HEADERED_OFFSET;
         let (rom_type, rom_name) = Rom::get_type_name(&rom, headered);
+
+        let reset_vector = {
+            let vector_loc = match rom_type {
+                LoROM | FastLoROM => {
+                    LOROM_EMU_MODE_VECTORS[Vectors::RESET as usize]
+                },
+                HiROM | FastHiROM => {
+                    HIROM_EMU_MODE_VECTORS[Vectors::RESET as usize]
+                },
+                _ => panic!("ExLo/HiROM formats not supported")
+            };
+
+            rom[vector_loc] as usize | ((rom[vector_loc + 1] as usize) << 8)
+        };
 
         Rom {
             data: rom.into_boxed_slice(),
             rom_type: rom_type,
             rom_name: rom_name,
             headered: headered,
+            reset_vector: reset_vector,
         }
     }
 
