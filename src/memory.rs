@@ -66,6 +66,10 @@ pub struct Memory {
 	ram: Box<[u8]>,
     pub rom: Rom,
     sram: [u8; SRAM_SIZE],
+    bregs: [u8; 72], // address bus B registers
+    jpregs: [u8; 2], // old style joypad registers
+    cpuregs: [u8; 32], // internal CPU registers; cannot write to 0x420E or 0x420F
+    dmaregs: [u8; 88], // DMA registers
 }
 
 impl Memory {
@@ -74,6 +78,10 @@ impl Memory {
             ram: vec![0; RAM_SIZE].into_boxed_slice(),
             rom: Rom::new(rom),
             sram: [0; SRAM_SIZE],
+            bregs: [0; 72],
+            jpregs: [0; 2],
+            cpuregs: [0; 32],
+            dmaregs: [0; 88],
         }
     }
 
@@ -97,7 +105,7 @@ impl Memory {
                     0x00 ... 0x3F | 0x80 ... 0xBF => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                panic!("Unimplemented: LowRAM, shadowed from bank 0x7E {:x}", addr)
+                                self.ram[offset]
                             },
                             0x2000 ... 0x20FF => {
                                 unreachable!("Invalid address {:x}", addr)
@@ -117,8 +125,22 @@ impl Memory {
                             0x4100 ... 0x41FF => {
                                 unreachable!("Invalid address {:x}", addr)
                             },
-                            0x4200 ... 0x44FF => {
-                                panic!("Unimplemented: DMA, PPU2, hardware registers {:x}", addr)
+                            0x4200 ... 0x420D | 0x4210 ... 0x421F => {
+                                let adjusted_offset = offset - 0x4200;
+
+                                self.cpuregs[adjusted_offset]
+                            },
+                            0x4300 ... 0x430A |
+                            0x4310 ... 0x431A |
+                            0x4320 ... 0x432A |
+                            0x4330 ... 0x433A |
+                            0x4340 ... 0x434A |
+                            0x4350 ... 0x435A |
+                            0x4360 ... 0x436A |
+                            0x4370 ... 0x437A => {
+                                let adjusted_offset = offset - 0x4300;
+
+                                self.dmaregs[adjusted_offset]
                             },
                             0x4500 ... 0x5FFF => {
                                 unreachable!("Invalid address {:x}", addr)
@@ -204,7 +226,7 @@ impl Memory {
                     0x00 ... 0x1F | 0x80 ... 0x9F => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                panic!("LowRAM, shadowed from bank 0x7E {:x}", addr)
+                                self.ram[offset]
                             },
                             0x2000 ... 0x20FF => {
                                 unreachable!("Invalid address {:x}", addr)
@@ -357,8 +379,8 @@ impl Memory {
         let offset_header = addr_offset & 0xFFFF;
 
         println!("addr {:x} h_offset: {:x} addr_offset: {:x} bank {:x} \
-                  bank_header {:x} offset {:x} offset_header {:x}",
-                 addr, header_offset, addr_offset, bank, bank_header, offset, offset_header);
+                  bank_header {:x} offset {:x} offset_header {:x} data {:x}",
+                 addr, header_offset, addr_offset, bank, bank_header, offset, offset_header, data);
 
         match self.rom.rom_type {
             LoROM | FastLoROM => {
@@ -366,7 +388,7 @@ impl Memory {
                     0x00 ... 0x3F | 0x80 ... 0xBF => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                panic!("Unimplemented: LowRAM, shadowed from bank 0x7E {:x}", addr)
+                                self.ram[offset] = data;
                             },
                             0x2000 ... 0x20FF => {
                                 unreachable!("Invalid address {:x}", addr)
@@ -386,8 +408,22 @@ impl Memory {
                             0x4100 ... 0x41FF => {
                                 unreachable!("Invalid address {:x}", addr)
                             },
-                            0x4200 ... 0x44FF => {
-                                panic!("Unimplemented: DMA, PPU2, hardware registers {:x}", addr)
+                            0x4200 ... 0x420D | 0x4210 ... 0x421F => {
+                                let adjusted_offset = offset - 0x4200;
+
+                                self.cpuregs[adjusted_offset] = data;
+                            },
+                            0x4300 ... 0x430A |
+                            0x4310 ... 0x431A |
+                            0x4320 ... 0x432A |
+                            0x4330 ... 0x433A |
+                            0x4340 ... 0x434A |
+                            0x4350 ... 0x435A |
+                            0x4360 ... 0x436A |
+                            0x4370 ... 0x437A => {
+                                let adjusted_offset = offset - 0x4300;
+
+                                self.dmaregs[adjusted_offset] = data;
                             },
                             0x4500 ... 0x5FFF => {
                                 unreachable!("Invalid address {:x}", addr)
@@ -398,7 +434,7 @@ impl Memory {
                             0x8000 ... 0xFFFF => {
                                 panic!("Cannot write to ROM {:x}", addr)
                             },
-                            _ => unreachable!("Invalid address {:x}", addr_offset)
+                            _ => unreachable!("Invalid address {:x}", addr)
                         }
                     },
                     0x40 ... 0x6F | 0xC0 ... 0xEF => {
@@ -461,13 +497,18 @@ impl Memory {
                     0x00 ... 0x1F | 0x80 ... 0x9F => {
                         match offset {
                             0x0000 ... 0x1FFF => {
-                                panic!("LowRAM, shadowed from bank 0x7E {:x}", addr)
+                                self.ram[offset] = data;
                             },
                             0x2000 ... 0x20FF => {
                                 unreachable!("Invalid address {:x}", addr)
                             },
-                            0x2100 ... 0x21FF => {
-                                panic!("Unimplemented: PPU1, APU, hardware registers {:x}", addr)
+                            0x2100 ... 0x2143 => {
+                                let adjusted_offset = offset - 0x2100;
+
+                                self.bregs[adjusted_offset] = data;
+                            },
+                            0x2180 ... 0x21FF => {
+                                panic!("WRAM Address Registers unimplemented {:x}", addr)
                             },
                             0x2200 ... 0x2FFF => {
                                 unreachable!("Invalid address {:x}", addr)
@@ -481,8 +522,22 @@ impl Memory {
                             0x4100 ... 0x41FF => {
                                 unreachable!("Invalid address {:x}", addr)
                             },
-                            0x4200 ... 0x44FF => {
-                                panic!("Unimplemented: DMA, PPU2, hardware registers {:x}", addr)
+                            0x4200 ... 0x420D | 0x4210 ... 0x421F => {
+                                let adjusted_offset = offset - 0x4200;
+
+                                self.cpuregs[adjusted_offset] = data;
+                            },
+                            0x4300 ... 0x430A |
+                            0x4310 ... 0x431A |
+                            0x4320 ... 0x432A |
+                            0x4330 ... 0x433A |
+                            0x4340 ... 0x434A |
+                            0x4350 ... 0x435A |
+                            0x4360 ... 0x436A |
+                            0x4370 ... 0x437A => {
+                                let adjusted_offset = offset - 0x4300;
+
+                                self.dmaregs[adjusted_offset] = data;
                             },
                             0x4500 ... 0x5FFF => {
                                 unreachable!("Invalid address {:x}", addr)

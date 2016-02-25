@@ -54,25 +54,41 @@ pub enum InstructionType {
 pub struct Absolute { pub instruction_type: InstructionType }
 impl Instruction for Absolute {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        panic!("Absolute load not implemented")
+        let addr = self.get_addr(cpu, memory);
+
+        let data = if is_byte {
+            load_byte(memory, addr) as usize
+        } else {
+            load_two_bytes(memory, addr) as usize
+        };
+
+        cpu.program_counter += 2;
+
+        data
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
-        let mut addr = (cpu.program_bank << 16) | cpu.program_counter;
+        let addr = self.get_addr(cpu, memory);
+
+        if is_byte {
+            store_byte(memory, addr, data as u8);
+        } else {
+            store_two_bytes(memory, addr, data as u16);
+        }
+
+        cpu.program_counter += 2;
+    }
+}
+
+impl Absolute {
+    fn get_addr(&self, cpu: &CPU, memory: &Memory) -> usize {
+        let addr = (cpu.program_bank << 16) | cpu.program_counter;
         let bank = match self.instruction_type {
             InstructionType::LocatingData => cpu.data_bank,
             InstructionType::ControlTransfer => cpu.program_bank,
         };
 
-        addr = (bank << 16) | (load_two_bytes(memory, addr) as usize);
-
-        if is_byte {
-            store_byte(memory, addr, data as u8);
-            cpu.program_counter += 1;
-        } else {
-            store_two_bytes(memory, addr, data as u16);
-            cpu.program_counter += 2;
-        }
+        (bank << 16) | (load_two_bytes(memory, addr) as usize)
     }
 }
 
@@ -185,7 +201,15 @@ impl Instruction for DirectPage {
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
-        panic!("DirectPage store not implemented")
+        let addr = cpu.direct_page + (load_byte(memory, cpu.program_counter) as usize);
+
+        if is_byte {
+            store_byte(memory, addr, data as u8);
+        } else {
+            store_two_bytes(memory, addr, data as u16);
+        }
+
+        cpu.program_counter += 1;
     }
 }
 
@@ -288,7 +312,7 @@ impl Instruction for Immediate {
 pub struct ProgramCounterRelative;
 impl Instruction for ProgramCounterRelative {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        panic!("ProgramCounterRelative load not implemented")
+        load_byte(memory, cpu.program_counter) as usize
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {

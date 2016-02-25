@@ -1,6 +1,9 @@
 use memory::Memory;
 use modes::*;
 use modes::InstructionType::*;
+use std::fmt;
+
+const IS_BYTE: bool = true;
 
 macro_rules! decode_op_and_execute {
     ($op:expr, $this:ident, $mem:ident) => (
@@ -71,7 +74,7 @@ macro_rules! decode_op_and_execute {
             },
             0x10 => {
                 let mode = ProgramCounterRelative;
-                $this.blp(&mode, $mem);
+                $this.bpl(&mode, $mem);
             },
             0x11 => {
                 let mode = DirectPageIndirectIndexedY;
@@ -1005,7 +1008,6 @@ macro_rules! decode_op_and_execute {
     );
 }
 
-#[derive(Debug)]
 pub struct CPU {
     accumulator:                        u16,
     index_x:                            u16,
@@ -1046,7 +1048,7 @@ impl CPU {
 
     pub fn run(&mut self, memory: &mut Memory) {
         loop {
-            println!("{:?}", self);
+            println!("{:?} {:?}", self, memory);
             self.run_instruction(memory);
         }
     }
@@ -1087,8 +1089,20 @@ impl CPU {
         panic!("phd unimplemented")
     }
 
-    fn blp<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("blp unimplemented")
+    fn bpl<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
+        use self::StatusFlags::Negative;
+        
+        if !self.processor_status.get_flag(Negative) {
+            let data = mode.load(self, memory, IS_BYTE) as i8;
+
+            if data < 0 {
+                self.program_counter -= !(data as usize) + 1;
+            } else {
+                self.program_counter += data as usize;
+            }
+        }
+
+        self.program_counter += 1;
     }
 
     fn trb<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1132,7 +1146,7 @@ impl CPU {
     fn pld<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         use self::StatusFlags::{Zero, Negative};
 
-        let data = mode.load(self, memory, false);
+        let data = mode.load(self, memory, !IS_BYTE);
         self.direct_page = data;
 
         self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
@@ -1185,11 +1199,13 @@ impl CPU {
     }
 
     fn phk<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("phk unimplemented")
+        let data = self.program_bank;
+
+        mode.store(self, memory, IS_BYTE, data);
     }
 
     fn jmp<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
-        let jump_addr = mode.load(self, memory, false) as usize;
+        let jump_addr = mode.load(self, memory, !IS_BYTE) as usize;
         self.program_counter = jump_addr & 0x00FFFF;
         self.program_bank = (jump_addr & 0xFF0000) >> 16;
     }
@@ -1211,7 +1227,13 @@ impl CPU {
     }
 
     fn tcd(&mut self) {
-        panic!("tcd unimplemented")
+        use self::StatusFlags::{Negative, Zero};
+
+        let data = self.accumulator as usize;
+        self.direct_page = data;
+
+        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, self.accumulator == 0);
     }
 
     fn rts<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1227,7 +1249,11 @@ impl CPU {
     }
 
     fn stz<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("stz unimplemented")
+        use self::StatusFlags::AccumulatorRegisterSize;
+
+        let emu = self.processor_status.status[AccumulatorRegisterSize as usize];
+
+        mode.store(self, memory, emu, 0);
     }
 
     fn ror<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1361,7 +1387,7 @@ impl CPU {
     fn plb<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         use self::StatusFlags::{Negative, Zero};
 
-        let data = mode.load(self, memory, true);
+        let data = mode.load(self, memory, IS_BYTE);
         self.data_bank = data;
 
         self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
@@ -1393,7 +1419,7 @@ impl CPU {
     }
 
     fn rep<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
-        let val = mode.load(self, memory, true);
+        let val = mode.load(self, memory, IS_BYTE);
 
         self.processor_status.set_by_byte(self.emulation_mode, val as u8, false);
     }
@@ -1480,15 +1506,26 @@ impl CPU {
     }
 
     fn sep<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
-        let val = mode.load(self, memory, true);
+        let val = mode.load(self, memory, IS_BYTE);
         
         self.processor_status.set_by_byte(self.emulation_mode, val as u8, true);
     }
 }
 
+impl fmt::Debug for CPU {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "CPU {{ accumulator: {:x}, index_x: {:x}, index_y: {:x}, stack_pointer: {:x}, \
+                          data_bank: {:x}, direct_page: {:x}, program_bank: {:x}, \
+                          processor_status: {:?}, program_counter: {:x}, emulation_mode: {}",
+                  self.accumulator, self.index_x, self.index_y, self.stack_pointer,
+                  self.data_bank, self.direct_page, self.program_bank, self.processor_status,
+                  self.program_counter, self.emulation_mode)
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct ProcessorStatus {
-    pub status: [bool; 8],
+    status: [bool; 8],
 }
 
 impl ProcessorStatus {
@@ -1507,6 +1544,10 @@ impl ProcessorStatus {
             }
         }
     }
+
+    pub fn get_flag(&self, flag: StatusFlags) -> bool {
+        self.status[flag as usize]
+    }
 }
 
 pub enum StatusFlags {
@@ -1519,3 +1560,4 @@ pub enum StatusFlags {
     Overflow = 6,
     Negative = 7,
 }
+
