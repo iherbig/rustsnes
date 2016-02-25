@@ -56,15 +56,9 @@ impl Instruction for Absolute {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
         let addr = self.get_addr(cpu, memory);
 
-        let data = if is_byte {
-            load_byte(memory, addr) as usize
-        } else {
-            load_two_bytes(memory, addr) as usize
-        };
-
         cpu.program_counter += 2;
 
-        data
+        addr
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
@@ -312,7 +306,7 @@ impl Instruction for Immediate {
 pub struct ProgramCounterRelative;
 impl Instruction for ProgramCounterRelative {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        load_byte(memory, cpu.program_counter) as usize
+        load_byte(memory, (cpu.program_bank << 16) + cpu.program_counter) as usize
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
@@ -378,7 +372,7 @@ impl Instruction for StackProgramCounterRelative {
 pub struct StackPull;
 impl Instruction for StackPull {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        let addr = cpu.stack_pointer;
+        let addr = cpu.stack_pointer + 1;
 
         if is_byte {
             cpu.stack_pointer += 1;
@@ -438,11 +432,17 @@ impl Instruction for StackRTL {
 pub struct StackRTS;
 impl Instruction for StackRTS {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        panic!("StackRTS load not implemented")
+        let pull = StackPull;
+
+        let data = pull.load(cpu, memory, is_byte);
+        let low = ((data & 0xFF00) >> 8) as usize;
+        let high = (data & 0xFF) as usize;
+
+        (high << 8) + low
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
-        panic!("StackRTS store not implemented")
+        unreachable!("StackRTS store doesn't exist")
     }
 }
 

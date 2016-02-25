@@ -135,16 +135,16 @@ macro_rules! decode_op_and_execute {
                 $this.ora(&mode, $mem);
             },
             0x20 => {
-                let mode = Absolute { instruction_type: ControlTransfer };
-                $this.jsr(&mode, $mem);
+                let mode = StackPush;
+                $this.jsr(&mode, $mem, false);
             },
             0x21 => {
                 let mode = DirectPageIndexedIndirectX;
                 $this.and(&mode, $mem);
             },
             0x22 => {
-                let mode = AbsoluteLong;
-                $this.jsr(&mode, $mem);
+                let mode = StackPush;
+                $this.jsr(&mode, $mem, true);
             },
             0x23 => {
                 let mode = StackRelative;
@@ -989,7 +989,7 @@ macro_rules! decode_op_and_execute {
             },
             0xFC => {
                 let mode = AbsoluteIndexedIndirect;
-                $this.jsr(&mode, $mem);
+                $this.jsr(&mode, $mem, false);
             },
             0xFD => {
                 let mode = AbsoluteIndexedX;
@@ -1048,7 +1048,7 @@ impl CPU {
 
     pub fn run(&mut self, memory: &mut Memory) {
         loop {
-            println!("{:?} {:?}", self, memory);
+            println!("{:?}\n{:?}", self, memory);
             self.run_instruction(memory);
         }
     }
@@ -1123,8 +1123,38 @@ impl CPU {
         panic!("tcs unimplemented")
     }
 
-    fn jsr<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("jsr unimplemented")
+    // The mode cannot be used in this function. Despite that the opcode may specify
+    // Absolute, Absolute Long, or Absolute Indexed Indirect X the actual value being
+    // assigned to PC and PB (in the case of long) are the immediate values specified
+    // by the operand rather than the operand being treated as an effective address.
+    fn jsr<T: Instruction>(&mut self, mode: &T, memory: &mut Memory, is_long: bool) {
+
+        // PC starts just past opcode at this point, but before we push it onto the stack
+        // it must be pointing at the last byte of the operand, which is either two or three
+        // past the opcode depending on the addressing mode
+        let pc = if is_long { self.program_counter + 2 } else { self.program_counter + 1 };
+
+        if is_long {
+            let pb = self.program_bank;
+            mode.store(self, memory, IS_BYTE, pb);
+        }
+
+        mode.store(self, memory, !IS_BYTE, pc);
+
+        let (bank, addr) = {
+            let tmp_addr = (self.program_bank << 16) + self.program_counter;
+            let low = memory.get_byte(tmp_addr) as usize;
+            let high = memory.get_byte(tmp_addr + 1) as usize;
+            let bank = if is_long { memory.get_byte(tmp_addr + 2) as usize } else { self.program_bank };
+
+            (bank, (high << 8) | low)
+        };
+
+        self.program_counter = addr;
+        
+        if is_long {
+            self.program_bank = bank;
+        }
     }
 
     fn and<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1206,6 +1236,7 @@ impl CPU {
 
     fn jmp<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         let jump_addr = mode.load(self, memory, !IS_BYTE) as usize;
+        println!("jump addr {:x}", jump_addr);
         self.program_counter = jump_addr & 0x00FFFF;
         self.program_bank = (jump_addr & 0xFF0000) >> 16;
     }
@@ -1237,7 +1268,9 @@ impl CPU {
     }
 
     fn rts<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("rts unimplemented")
+        let addr = mode.load(self, memory, !IS_BYTE);
+
+        self.program_counter = addr + 1;
     }
 
     fn adc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1300,7 +1333,7 @@ impl CPU {
 
         let data = self.accumulator as usize;
 
-        let emu = self.processor_status.status[AccumulatorRegisterSize as usize];
+        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
         mode.store(self, memory, emu, data);
     }
 
@@ -1313,7 +1346,12 @@ impl CPU {
     }
 
     fn stx<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("stx unimplemented")
+        use self::StatusFlags::IndexRegisterSize;
+
+        let data = self.index_x as usize;
+
+        let emu = self.processor_status.get_flag(IndexRegisterSize);
+        mode.store(self, memory, emu, data);
     }
 
     fn dey(&mut self) {
@@ -1381,7 +1419,18 @@ impl CPU {
     }
 
     fn tax(&mut self) {
-        panic!("tax unimplemented")
+        use self::StatusFlags::{Negative, Zero, IndexRegisterSize};
+
+        self.index_x = self.accumulator;
+
+        if self.processor_status.get_flag(IndexRegisterSize) {
+            self.index_x &= 0x00FF;
+        }
+
+        let data = self.index_x as u8;
+
+        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, self.index_x == 0);
     }
 
     fn plb<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
@@ -1429,7 +1478,13 @@ impl CPU {
     }
 
     fn dex(&mut self) {
-        panic!("dex unimplemented")
+        use self::StatusFlags::{Negative, Zero};
+        
+        self.index_x -= 1;
+        let data = self.index_x;
+
+        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, self.index_x == 0);
     }
 
     fn wai(&mut self) {
@@ -1437,7 +1492,19 @@ impl CPU {
     }
 
     fn bne<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("bne unimplemented")
+        use self::StatusFlags::Zero;
+
+        if !self.processor_status.get_flag(Zero) {
+            let data = mode.load(self, memory, IS_BYTE) as i8;
+
+            if data < 0 {
+                self.program_counter -= !(data as usize) + 1;
+            } else {
+                self.program_counter += data as usize;
+            }
+        }
+
+        self.program_counter += 1;
     }
 
     fn pei<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1514,9 +1581,18 @@ impl CPU {
 
 impl fmt::Debug for CPU {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "CPU {{ accumulator: {:x}, index_x: {:x}, index_y: {:x}, stack_pointer: {:x}, \
-                          data_bank: {:x}, direct_page: {:x}, program_bank: {:x}, \
-                          processor_status: {:?}, program_counter: {:x}, emulation_mode: {}",
+        write!(f, "CPU {{
+      accumulator: {:x},
+      index_x: {:x},
+      index_y: {:x},
+      stack_pointer: {:x},
+      data_bank: {:x},
+      direct_page: {:x},
+      program_bank: {:x},
+      processor_status: {:?},
+      program_counter: {:x},
+      emulation_mode: {}
+    }}",
                   self.accumulator, self.index_x, self.index_y, self.stack_pointer,
                   self.data_bank, self.direct_page, self.program_bank, self.processor_status,
                   self.program_counter, self.emulation_mode)

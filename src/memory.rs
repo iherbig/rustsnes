@@ -66,7 +66,8 @@ pub struct Memory {
 	ram: Box<[u8]>,
     pub rom: Rom,
     sram: [u8; SRAM_SIZE],
-    bregs: [u8; 72], // address bus B registers
+    bregs: [u8; 68], // address bus B registers
+    wramregs: [u8; 4], // wram registers
     jpregs: [u8; 2], // old style joypad registers
     cpuregs: [u8; 32], // internal CPU registers; cannot write to 0x420E or 0x420F
     dmaregs: [u8; 88], // DMA registers
@@ -78,7 +79,8 @@ impl Memory {
             ram: vec![0; RAM_SIZE].into_boxed_slice(),
             rom: Rom::new(rom),
             sram: [0; SRAM_SIZE],
-            bregs: [0; 72],
+            bregs: [0; 68],
+            wramregs: [0; 4],
             jpregs: [0; 2],
             cpuregs: [0; 32],
             dmaregs: [0; 88],
@@ -507,8 +509,10 @@ impl Memory {
 
                                 self.bregs[adjusted_offset] = data;
                             },
-                            0x2180 ... 0x21FF => {
-                                panic!("WRAM Address Registers unimplemented {:x}", addr)
+                            0x2180 ... 0x2183 => {
+                                let adjusted_offset = offset - 0x2180;
+
+                                self.wramregs[adjusted_offset] = data;
                             },
                             0x2200 ... 0x2FFF => {
                                 unreachable!("Invalid address {:x}", addr)
@@ -722,7 +726,12 @@ impl Rom {
 
 impl fmt::Debug for Rom {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Rom {{ rom_type: {:?}, rom_name: {}, headered: {}, reset_vector: {:x} }}",
+        write!(f, "Rom {{
+                    rom_type: {:?},
+                    rom_name: {},
+                    headered: {},
+                    reset_vector: {:x}
+                  }}",
                self.rom_type, self.rom_name, self.headered, self.reset_vector)
     }
 }
