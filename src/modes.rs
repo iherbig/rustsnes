@@ -347,17 +347,6 @@ impl Instruction for StackDirectPageIndirect {
     }
 }
 
-pub struct StackInterrupt;
-impl Instruction for StackInterrupt {
-    fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        panic!("StackInterrupt load not implemented")
-    }
-
-    fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
-        panic!("StackInterrupt store not implemented")
-    }
-}
-
 pub struct StackProgramCounterRelative;
 impl Instruction for StackProgramCounterRelative {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {

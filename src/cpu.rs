@@ -9,7 +9,7 @@ macro_rules! decode_op_and_execute {
     ($op:expr, $this:ident, $mem:ident) => (
         match $op {
             0x00 => {
-                let mode = StackInterrupt;
+                let mode = StackPush;
                 $this.brk(&mode, $mem);
             },
             0x01 => {
@@ -17,8 +17,7 @@ macro_rules! decode_op_and_execute {
                 $this.ora(&mode, $mem);
             },
             0x02 => {
-                let mode = StackInterrupt;
-                $this.cop(&mode, $mem);
+                unreachable!("COP is not used by the SNES");
             },
             0x03 => {
                 let mode = StackRelative;
@@ -1062,15 +1061,46 @@ impl CPU {
     }
 
     fn brk<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("brk unimplemented")
+        use self::StatusFlags::IndexRegisterSize; // This is the break flag in emulation mode
+        use self::StatusFlags::{IRQDisable, Decimal};
+
+        let pc = self.program_counter + 1;
+        let interrupt_vector = memory.get_interrupt_vector(self.emulation_mode);
+
+        if self.emulation_mode {
+            self.processor_status.set_flag(IndexRegisterSize, true);
+            let ps = self.processor_status.as_byte() as usize;
+
+            mode.store(self, memory, !IS_BYTE, pc);    
+            mode.store(self, memory, IS_BYTE, ps);
+        } else {
+            let pb = self.program_bank;
+            let ps = self.processor_status.as_byte() as usize;
+
+            mode.store(self, memory, IS_BYTE, pb);
+            mode.store(self, memory, !IS_BYTE, pc);
+            mode.store(self, memory, IS_BYTE, ps);
+
+            self.program_bank = 0;
+        }
+
+        self.processor_status.set_flag(IRQDisable, true);
+        self.processor_status.set_flag(Decimal, false); // Cleared "after" the break, but when is "after"?
+
+        self.program_counter = interrupt_vector;
     }
 
     fn ora<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("ora unimplemented")
-    }
+        use self::StatusFlags::{Negative, Zero, AccumulatorRegisterSize};
 
-    fn cop<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("cop unimplemented")
+        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
+        let data = mode.load(self, memory, emu);
+
+        self.accumulator |= data as u16;
+        let result = self.accumulator;
+
+        self.processor_status.set_flag(Negative, result.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, self.accumulator == 0);
     }
 
     fn tsb<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {

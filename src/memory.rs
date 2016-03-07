@@ -642,6 +642,28 @@ impl Memory {
             },
         }
     }
+
+    pub fn get_interrupt_vector(&self, emu: bool) -> usize {
+        use self::RomType::*;
+
+        match self.rom.rom_type {
+            LoROM | FastLoROM => {
+                if emu {
+                    LOROM_EMU_MODE_VECTORS[Vectors::IRQ as usize]
+                } else {
+                    LOROM_NATIVE_MODE_VECTORS[Vectors::IRQ as usize]
+                }
+            },
+            HiROM | FastHiROM => {
+                if emu {
+                    HIROM_EMU_MODE_VECTORS[Vectors::IRQ as usize]
+                } else {
+                    HIROM_NATIVE_MODE_VECTORS[Vectors::IRQ as usize]
+                }
+            },
+            _ => panic!("ExLo/HiROM formats not supported")
+        }
+    }
 }
 
 pub struct Rom {
