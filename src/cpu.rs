@@ -1082,11 +1082,15 @@ impl CPU {
     }
 
     fn php<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("php unimplemented")
+        let data = self.processor_status.as_byte() as usize;
+
+        mode.store(self, memory, IS_BYTE, data);
     }
 
     fn phd<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("phd unimplemented")
+        let data = self.direct_page;
+
+        mode.store(self, memory, !IS_BYTE, data);
     }
 
     fn bpl<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1224,7 +1228,7 @@ impl CPU {
 
         let data = self.accumulator as usize;
 
-        let emu = self.processor_status.status[AccumulatorRegisterSize as usize];
+        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
         mode.store(self, memory, emu, data);
     }
 
@@ -1254,7 +1258,12 @@ impl CPU {
     }
 
     fn phy<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("phy unimplemented")
+        use self::StatusFlags::IndexRegisterSize;
+
+        let data = self.index_y as usize;
+
+        let emu = self.processor_status.get_flag(IndexRegisterSize);
+        mode.store(self, memory, emu, data);
     }
 
     fn tcd(&mut self) {
@@ -1284,7 +1293,7 @@ impl CPU {
     fn stz<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::AccumulatorRegisterSize;
 
-        let emu = self.processor_status.status[AccumulatorRegisterSize as usize];
+        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
 
         mode.store(self, memory, emu, 0);
     }
@@ -1332,8 +1341,8 @@ impl CPU {
         use self::StatusFlags::AccumulatorRegisterSize;
 
         let data = self.accumulator as usize;
-
         let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
+
         mode.store(self, memory, emu, data);
     }
 
@@ -1342,15 +1351,20 @@ impl CPU {
     }
 
     fn sty<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("sty unimplemented")
+        use self::StatusFlags::IndexRegisterSize;
+
+        let data = self.index_y as usize;
+        let emu = self.processor_status.get_flag(IndexRegisterSize);
+
+        mode.store(self, memory, emu, data);
     }
 
     fn stx<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::IndexRegisterSize;
 
         let data = self.index_x as usize;
-
         let emu = self.processor_status.get_flag(IndexRegisterSize);
+
         mode.store(self, memory, emu, data);
     }
 
@@ -1363,7 +1377,9 @@ impl CPU {
     }
 
     fn phb<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("phb unimplemented")
+        let data = self.data_bank;
+
+        mode.store(self, memory, IS_BYTE, data);
     }
 
     fn bcc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1377,7 +1393,7 @@ impl CPU {
     fn txs(&mut self) {
         use self::StatusFlags::IndexRegisterSize;
 
-        if self.emulation_mode || self.processor_status.status[IndexRegisterSize as usize] {
+        if self.emulation_mode || self.processor_status.get_flag(IndexRegisterSize) {
             self.stack_pointer = (0xFF & self.index_x) as usize;
         } else {
             self.stack_pointer = self.index_x as usize;
@@ -1389,13 +1405,21 @@ impl CPU {
     }
 
     fn ldy<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("ldy unimplemented")
+        use self::StatusFlags::{Negative, Zero, IndexRegisterSize};
+        
+        let emu = self.processor_status.get_flag(IndexRegisterSize);
+        let data = mode.load(self, memory, emu);
+
+        self.index_y = data as u16;
+
+        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, self.index_y == 0);
     }
 
     fn lda<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         use self::StatusFlags::{AccumulatorRegisterSize, Negative, Zero};
 
-        let emu = self.processor_status.status[AccumulatorRegisterSize as usize];
+        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
         let data = mode.load(self, memory, emu);
         self.accumulator = data as u16;
         
@@ -1406,7 +1430,7 @@ impl CPU {
     fn ldx<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         use self::StatusFlags::{IndexRegisterSize, Zero, Negative};
 
-        let emu = self.processor_status.status[IndexRegisterSize as usize];
+        let emu = self.processor_status.get_flag(IndexRegisterSize);
         let data = mode.load(self, memory, emu);
         self.index_x = data as u16;
 
@@ -1520,7 +1544,7 @@ impl CPU {
 
         let data = self.index_x as usize;
 
-        let emu = self.processor_status.status[IndexRegisterSize as usize];
+        let emu = self.processor_status.get_flag(IndexRegisterSize);
         mode.store(self, memory, emu, data);
     }
 
@@ -1529,7 +1553,16 @@ impl CPU {
     }
 
     fn cpx<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("cpx unimplemented")
+        use self::StatusFlags::{Negative, Zero, Carry, IndexRegisterSize};
+
+        let emu = self.processor_status.get_flag(IndexRegisterSize);
+        let data = mode.load(self, memory, emu);
+
+        let result = (data as isize) - self.index_x as isize;
+
+        self.processor_status.set_flag(Negative, result.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Zero, result == 0);
+        self.processor_status.set_flag(Carry, if result > 0 { false } else { true });
     }
 
     fn sbc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1568,8 +1601,8 @@ impl CPU {
         use self::StatusFlags::Carry;
 
         let emu_bit = self.emulation_mode;
-        self.emulation_mode = self.processor_status.status[Carry as usize];
-        self.processor_status.status[Carry as usize] = emu_bit;
+        self.emulation_mode = self.processor_status.get_flag(Carry);
+        self.processor_status.set_flag(Carry, emu_bit);
     }
 
     fn sep<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
@@ -1619,6 +1652,18 @@ impl ProcessorStatus {
                 }
             }
         }
+    }
+
+    pub fn as_byte(&self) -> u8 {
+        let mut byte = 0;
+
+        for i in 0..8 {
+            if self.status[i] {
+                byte |= 1 << i;
+            }
+        }
+
+        byte
     }
 
     pub fn get_flag(&self, flag: StatusFlags) -> bool {
