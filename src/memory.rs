@@ -97,7 +97,7 @@ impl Memory {
         let offset = addr & 0xFFFF;
         let offset_header = addr_offset & 0xFFFF;
 
-        println!("addr {:x} h_offset: {:x} addr_offset: {:x} bank {:x} \
+        println!("get addr {:x} h_offset: {:x} addr_offset: {:x} bank {:x} \
                   bank_header {:x} offset {:x} offset_header {:x}",
                  addr, header_offset, addr_offset, bank, bank_header, offset, offset_header);
 
@@ -380,7 +380,7 @@ impl Memory {
         let offset = addr & 0xFFFF;
         let offset_header = addr_offset & 0xFFFF;
 
-        println!("addr {:x} h_offset: {:x} addr_offset: {:x} bank {:x} \
+        println!("set addr {:x} h_offset: {:x} addr_offset: {:x} bank {:x} \
                   bank_header {:x} offset {:x} offset_header {:x} data {:x}",
                  addr, header_offset, addr_offset, bank, bank_header, offset, offset_header, data);
 

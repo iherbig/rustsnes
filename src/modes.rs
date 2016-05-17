@@ -58,7 +58,16 @@ impl Instruction for Absolute {
 
         cpu.program_counter += 2;
 
-        addr
+        match self.instruction_type {
+            InstructionType::ControlTransfer => addr,
+            InstructionType::LocatingData => {
+                if is_byte {
+                    load_byte(memory, addr) as usize
+                } else {
+                    load_two_bytes(memory, addr) as usize
+                }
+            },
+        }
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
@@ -141,17 +150,31 @@ impl Instruction for AbsoluteIndirectLong {
     }
 }
 
-pub struct AbsoluteLong;
+pub struct AbsoluteLong { pub instruction_type: InstructionType }
 impl Instruction for AbsoluteLong {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        let addr = (cpu.program_bank << 16) + cpu.program_counter;
+        let addr = self.get_addr(cpu, memory);
+
         cpu.program_counter += 3;
 
-        load_three_bytes(memory, addr) as usize
+        let res = match self.instruction_type {
+            InstructionType::LocatingData => load_three_bytes(memory, addr) as usize,
+            InstructionType::ControlTransfer => addr,
+        };
+
+        println!("res is {:x}", res);
+        res
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
         panic!("AbsoluteLong store not implemented")
+    }
+}
+
+impl AbsoluteLong {
+    fn get_addr(&self, cpu: &CPU, memory: &Memory) -> usize {
+        let addr = (cpu.program_bank << 16) | cpu.program_counter;
+        load_three_bytes(memory, addr) as usize
     }
 }
 

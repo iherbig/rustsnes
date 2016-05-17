@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::Read;
 
 mod cpu;
+mod apu;
 mod ppu;
 mod memory;
 mod modes;
@@ -18,8 +19,9 @@ fn main() {
 
     let mem = memory::Memory::new(rom);
     let ppu = ppu::PPU::new();
+    let apu = apu::APU::new();
     let cpu = cpu::CPU::new(&mem);
-    let mut snes = snes::SNES::new(cpu, ppu, mem);
+    let mut snes = snes::SNES::new(cpu, ppu, apu, mem);
 
     snes.run();
 }

@@ -68,7 +68,7 @@ macro_rules! decode_op_and_execute {
                 $this.asl(&mode, $mem);
             },
             0x0F => {
-                let mode = AbsoluteLong;
+                let mode = AbsoluteLong { instruction_type : LocatingData };
                 $this.ora(&mode, $mem);
             },
             0x10 => {
@@ -134,7 +134,7 @@ macro_rules! decode_op_and_execute {
                 $this.ora(&mode, $mem);
             },
             0x20 => {
-                let mode = StackPush;
+                let mode = Absolute { instruction_type: ControlTransfer };
                 $this.jsr(&mode, $mem, false);
             },
             0x21 => {
@@ -142,7 +142,7 @@ macro_rules! decode_op_and_execute {
                 $this.and(&mode, $mem);
             },
             0x22 => {
-                let mode = StackPush;
+                let mode = AbsoluteLong { instruction_type: ControlTransfer };
                 $this.jsr(&mode, $mem, true);
             },
             0x23 => {
@@ -194,7 +194,7 @@ macro_rules! decode_op_and_execute {
                 $this.rol(&mode, $mem);
             },
             0x2F => {
-                let mode = AbsoluteLong;
+                let mode = AbsoluteLong { instruction_type: LocatingData };
                 $this.and(&mode, $mem);
             },
             0x30 => {
@@ -319,7 +319,7 @@ macro_rules! decode_op_and_execute {
                 $this.lsr(&mode, $mem);
             },
             0x4F => {
-                let mode = AbsoluteLong;
+                let mode = AbsoluteLong { instruction_type: LocatingData };
                 $this.eor(&mode, $mem);
             },
             0x50 => {
@@ -369,7 +369,7 @@ macro_rules! decode_op_and_execute {
                 $this.tcd();
             },
             0x5C => {
-                let mode = AbsoluteLong;
+                let mode = AbsoluteLong { instruction_type: ControlTransfer };
                 $this.jmp(&mode, $mem);
             },
             0x5D => {
@@ -445,7 +445,7 @@ macro_rules! decode_op_and_execute {
                 $this.ror(&mode, $mem);
             },
             0x6F => {
-                let mode = AbsoluteLong;
+                let mode = AbsoluteLong { instruction_type: LocatingData };
                 $this.adc(&mode, $mem);
             },
             0x70 => {
@@ -569,7 +569,7 @@ macro_rules! decode_op_and_execute {
                 $this.stx(&mode, $mem);
             },
             0x8F => {
-                let mode = AbsoluteLong;
+                let mode = AbsoluteLong { instruction_type: LocatingData };
                 $this.sta(&mode, $mem);
             },
             0x90 => {
@@ -692,7 +692,7 @@ macro_rules! decode_op_and_execute {
                 $this.ldx(&mode, $mem);
             },
             0xAF => {
-                let mode = AbsoluteLong;
+                let mode = AbsoluteLong { instruction_type: LocatingData };
                 $this.lda(&mode, $mem);
             },
             0xB0 => {
@@ -814,7 +814,7 @@ macro_rules! decode_op_and_execute {
                 $this.dec(&mode, $mem);
             },
             0xCF => {
-                let mode = AbsoluteLong;
+                let mode = AbsoluteLong { instruction_type: LocatingData };
                 $this.cmp(&mode, $mem);
             },
             0xD0 => {
@@ -937,7 +937,7 @@ macro_rules! decode_op_and_execute {
                 $this.inc(&mode, $mem);
             },
             0xEF => {
-                let mode = AbsoluteLong;
+                let mode = AbsoluteLong { instruction_type: LocatingData };
                 $this.sbc(&mode, $mem);
             },
             0xF0 => {
@@ -1053,8 +1053,9 @@ impl CPU {
     }
 
     fn run_instruction(&mut self, memory: &mut Memory) {
-        let opcode = memory.get_byte((self.program_bank << 16) | self.program_counter);
-        println!("opcode {:x}", opcode);
+        let addr = (self.program_bank << 16) | self.program_counter;
+        let opcode = memory.get_byte(addr);
+        println!("addr {:x} opcode {:x}", addr, opcode);
 
         self.program_counter += 1;
         decode_op_and_execute!(opcode, self, memory);
@@ -1157,31 +1158,26 @@ impl CPU {
         panic!("tcs unimplemented")
     }
 
-    // The mode cannot be used in this function. Despite that the opcode may specify
-    // Absolute, Absolute Long, or Absolute Indexed Indirect X the actual value being
-    // assigned to PC and PB (in the case of long) are the immediate values specified
-    // by the operand rather than the operand being treated as an effective address.
     fn jsr<T: Instruction>(&mut self, mode: &T, memory: &mut Memory, is_long: bool) {
 
         // PC starts just past opcode at this point, but before we push it onto the stack
         // it must be pointing at the last byte of the operand, which is either two or three
         // past the opcode depending on the addressing mode
         let pc = if is_long { self.program_counter + 2 } else { self.program_counter + 1 };
+        let push = StackPush;
 
         if is_long {
             let pb = self.program_bank;
-            mode.store(self, memory, IS_BYTE, pb);
+            push.store(self, memory, IS_BYTE, pb);
         }
 
-        mode.store(self, memory, !IS_BYTE, pc);
+        push.store(self, memory, !IS_BYTE, pc);
 
         let (bank, addr) = {
-            let tmp_addr = (self.program_bank << 16) + self.program_counter;
-            let low = memory.get_byte(tmp_addr) as usize;
-            let high = memory.get_byte(tmp_addr + 1) as usize;
-            let bank = if is_long { memory.get_byte(tmp_addr + 2) as usize } else { self.program_bank };
+            let tmp_addr = mode.load(self, memory, !IS_BYTE);
+            let bank = (tmp_addr & 0xFF0000) >> 16;
 
-            (bank, (high << 8) | low)
+            (bank, tmp_addr & 0x00FFFF)
         };
 
         self.program_counter = addr;
@@ -1189,6 +1185,8 @@ impl CPU {
         if is_long {
             self.program_bank = bank;
         }
+
+        println!("jsr addr {:x}{:x}", bank, addr);
     }
 
     fn and<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1270,9 +1268,9 @@ impl CPU {
 
     fn jmp<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         let jump_addr = mode.load(self, memory, !IS_BYTE) as usize;
-        println!("jump addr {:x}", jump_addr);
         self.program_counter = jump_addr & 0x00FFFF;
         self.program_bank = (jump_addr & 0xFF0000) >> 16;
+        println!("jump_addr {:x}", jump_addr);
     }
 
     fn bvc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1310,6 +1308,8 @@ impl CPU {
         let addr = mode.load(self, memory, !IS_BYTE);
 
         self.program_counter = addr + 1;
+
+        println!("rts addr {:x}", addr + 1);
     }
 
     fn adc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1587,6 +1587,8 @@ impl CPU {
 
         let emu = self.processor_status.get_flag(IndexRegisterSize);
         let data = mode.load(self, memory, emu);
+
+        println!("data in cpx {:x}", data);
 
         let result = (data as isize) - self.index_x as isize;
 
