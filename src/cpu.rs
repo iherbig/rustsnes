@@ -1046,10 +1046,8 @@ impl CPU {
 	}
 
     pub fn run(&mut self, memory: &mut Memory) {
-        loop {
-            println!("{:?}\n{:?}", self, memory);
-            self.run_instruction(memory);
-        }
+        println!("{:?}\n{:?}", self, memory);
+        self.run_instruction(memory);
     }
 
     fn run_instruction(&mut self, memory: &mut Memory) {
@@ -1588,7 +1586,7 @@ impl CPU {
         let emu = self.processor_status.get_flag(IndexRegisterSize);
         let data = mode.load(self, memory, emu);
 
-        println!("data in cpx {:x}", data);
+        println!("in cpx: data {:x} xreg {:x}", data, self.index_x);
 
         let result = (data as isize) - self.index_x as isize;
 

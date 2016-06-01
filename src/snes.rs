@@ -20,8 +20,10 @@ impl SNES {
         }
     }
     pub fn run(&mut self) {
-        self.cpu.run(&mut self.memory);
-        self.ppu.run(&mut self.memory);
-        self.apu.run(&mut self.memory);
+        loop {
+            self.cpu.run(&mut self.memory);
+            self.ppu.run(&mut self.memory);
+            self.apu.run(&mut self.memory);
+        }
     }
 }

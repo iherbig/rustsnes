@@ -234,7 +234,9 @@ impl Memory {
                                 unreachable!("Invalid address {:x}", addr)
                             },
                             0x2100 ... 0x21FF => {
-                                panic!("Unimplemented: PPU1, APU, hardware registers {:x}", addr)
+                                let adjusted_offset = offset - 0x2100;
+
+                                self.bregs[adjusted_offset]
                             },
                             0x2200 ... 0x2FFF => {
                                 unreachable!("Invalid address {:x}", addr)
