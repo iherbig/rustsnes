@@ -97,9 +97,11 @@ impl Memory {
         let offset = addr & 0xFFFF;
         let offset_header = addr_offset & 0xFFFF;
 
+        /*
         println!("get addr {:x} h_offset: {:x} addr_offset: {:x} bank {:x} \
                   bank_header {:x} offset {:x} offset_header {:x}",
                  addr, header_offset, addr_offset, bank, bank_header, offset, offset_header);
+                 */
 
         match self.rom.rom_type {
             LoROM | FastLoROM => {
@@ -382,9 +384,11 @@ impl Memory {
         let offset = addr & 0xFFFF;
         let offset_header = addr_offset & 0xFFFF;
 
+        /*
         println!("set addr {:x} h_offset: {:x} addr_offset: {:x} bank {:x} \
                   bank_header {:x} offset {:x} offset_header {:x} data {:x}",
                  addr, header_offset, addr_offset, bank, bank_header, offset, offset_header, data);
+                 */
 
         match self.rom.rom_type {
             LoROM | FastLoROM => {

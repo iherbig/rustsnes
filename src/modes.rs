@@ -157,13 +157,10 @@ impl Instruction for AbsoluteLong {
 
         cpu.program_counter += 3;
 
-        let res = match self.instruction_type {
+        match self.instruction_type {
             InstructionType::LocatingData => load_three_bytes(memory, addr) as usize,
             InstructionType::ControlTransfer => addr,
-        };
-
-        println!("res is {:x}", res);
-        res
+        }
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
@@ -181,7 +178,15 @@ impl AbsoluteLong {
 pub struct AbsoluteLongIndexedX;
 impl Instruction for AbsoluteLongIndexedX {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        panic!("AbsoluteLongIndexedX load not implemented")
+        let long = AbsoluteLong { instruction_type: InstructionType::LocatingData };
+
+        let addr = long.load(cpu, memory, is_byte);
+
+        if is_byte {
+            addr + ((cpu.index_x as u8) as usize)
+        } else {
+            addr + (cpu.index_x as usize)
+        }
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
@@ -299,7 +304,16 @@ impl Instruction for DirectPageIndirectIndexedY {
 pub struct DirectPageIndirectLongIndexedY;
 impl Instruction for DirectPageIndirectLongIndexedY {
     fn load(&self, cpu: &mut CPU, memory: &Memory, is_byte: bool) -> usize {
-        panic!("DirectPageIndirectLongIndexedY load not implemented")
+        let offset = load_byte(memory, cpu.program_counter);
+        cpu.program_counter += 1;
+
+        let addr = load_three_bytes(memory, cpu.direct_page + offset as usize) as usize;
+
+        if is_byte {
+            load_byte(memory, addr + ((cpu.index_y as u8) as usize)) as usize
+        } else {
+            load_byte(memory, addr + (cpu.index_y as usize)) as usize
+        }
     }
 
     fn store(&self, cpu: &mut CPU, memory: &mut Memory, is_byte: bool, data: usize) {
