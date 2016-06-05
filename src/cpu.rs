@@ -1301,36 +1301,36 @@ impl CPU {
 	}
 
     pub fn run(&mut self, memory: &mut Memory) {
-        //println!("{:?}\n{:?}", self, memory);
         self.run_instruction(memory);
+        //println!("{:?}\n{:?}", self, memory);
     }
 
     fn run_instruction(&mut self, memory: &mut Memory) {
         let addr = (self.program_bank << 16) | self.program_counter;
-        println!("at address {:x}", addr);
 
         let opcode = memory.get_byte(addr);
 
-        self.program_counter += 1;
+        self.program_counter = self.program_counter.wrapping_add(1);
         decode_op_and_execute!(opcode, self, memory);
+        println!("at address {:x}", addr);
     }
 
     fn brk<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::IndexRegisterSize; // This is the break flag in emulation mode
         use self::StatusFlags::{IRQDisable, Decimal};
 
-        let pc = self.program_counter + 1;
+        let pc = (self.program_counter.wrapping_add(1)) as u32;
         let interrupt_vector = memory.get_interrupt_vector(self.emulation_mode);
 
         if self.emulation_mode {
             self.processor_status.set_flag(IndexRegisterSize, true);
-            let ps = self.processor_status.as_byte() as usize;
+            let ps = self.processor_status.as_byte() as u32;
 
             mode.store(self, memory, !IS_BYTE, pc);    
             mode.store(self, memory, IS_BYTE, ps);
         } else {
-            let pb = self.program_bank;
-            let ps = self.processor_status.as_byte() as usize;
+            let pb = self.program_bank as u32;
+            let ps = self.processor_status.as_byte() as u32;
 
             mode.store(self, memory, IS_BYTE, pb);
             mode.store(self, memory, !IS_BYTE, pc);
@@ -1367,13 +1367,13 @@ impl CPU {
     }
 
     fn php<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        let data = self.processor_status.as_byte() as usize;
+        let data = self.processor_status.as_byte() as u32;
 
         mode.store(self, memory, IS_BYTE, data);
     }
 
     fn phd<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        let data = self.direct_page;
+        let data = self.direct_page as u32;
 
         mode.store(self, memory, !IS_BYTE, data);
     }
@@ -1385,13 +1385,13 @@ impl CPU {
             let data = mode.load(self, memory, IS_BYTE) as i8;
 
             if data < 0 {
-                self.program_counter -= !(data as usize) + 1;
+                self.program_counter = self.program_counter.wrapping_sub((!(data as usize)).wrapping_add(1));
             } else {
-                self.program_counter += data as usize;
+                self.program_counter = self.program_counter.wrapping_add(data as usize);
             }
         }
 
-        self.program_counter += 1;
+        self.program_counter = self.program_counter.wrapping_add(1);
     }
 
     fn trb<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1405,7 +1405,20 @@ impl CPU {
     }
 
     fn inc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("inc unimplemented")
+        use self::StatusFlags::{AccumulatorRegisterSize, Negative, Zero};
+
+        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
+        let data = mode.load(self, memory, emu).wrapping_add(1);
+        mode.store(self, memory, emu, data);
+
+        let negative_check = if emu {
+            ((data & 0x80) >> 7) == 1
+        } else {
+            ((data & 0x8000) >> 15) == 1
+        };
+
+        self.processor_status.set_flag(Negative, negative_check);
+        self.processor_status.set_flag(Zero, data == 0);
     }
 
     fn tcs(&mut self) {
@@ -1417,18 +1430,18 @@ impl CPU {
         // PC starts just past opcode at this point, but before we push it onto the stack
         // it must be pointing at the last byte of the operand, which is either two or three
         // past the opcode depending on the addressing mode
-        let pc = if is_long { self.program_counter + 2 } else { self.program_counter + 1 };
+        let pc = (if is_long { self.program_counter.wrapping_add(2) } else { self.program_counter.wrapping_add(1) }) as u32;
         let push = StackPush;
 
         if is_long {
-            let pb = self.program_bank;
+            let pb = self.program_bank as u32;
             push.store(self, memory, IS_BYTE, pb);
         }
 
         push.store(self, memory, !IS_BYTE, pc);
 
         let (bank, addr) = {
-            let tmp_addr = mode.load(self, memory, !IS_BYTE);
+            let tmp_addr = mode.load(self, memory, !IS_BYTE) as usize;
             let bank = (tmp_addr & 0xFF0000) >> 16;
 
             (bank, tmp_addr & 0x00FFFF)
@@ -1462,10 +1475,11 @@ impl CPU {
     fn pld<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         use self::StatusFlags::{Zero, Negative};
 
-        let data = mode.load(self, memory, !IS_BYTE);
-        self.direct_page = data;
+        self.direct_page = mode.load(self, memory, !IS_BYTE) as usize;
 
-        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        let negative_check = ((self.direct_page & 0x8000) >> 15) == 1;
+
+        self.processor_status.set_flag(Negative, negative_check);
         self.processor_status.set_flag(Zero, self.direct_page == 0);
     }
 
@@ -1508,15 +1522,14 @@ impl CPU {
     fn pha<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::AccumulatorRegisterSize;
 
-        let data = self.accumulator as usize;
+        let data = self.accumulator as u32;
 
         let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
         mode.store(self, memory, emu, data);
     }
 
     fn phk<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        let data = self.program_bank;
-
+        let data = self.program_bank as u32;
         mode.store(self, memory, IS_BYTE, data);
     }
 
@@ -1542,7 +1555,7 @@ impl CPU {
     fn phy<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::IndexRegisterSize;
 
-        let data = self.index_y as usize;
+        let data = self.index_y as u32;
 
         let emu = self.processor_status.get_flag(IndexRegisterSize);
         mode.store(self, memory, emu, data);
@@ -1551,17 +1564,16 @@ impl CPU {
     fn tcd(&mut self) {
         use self::StatusFlags::{Negative, Zero};
 
-        let data = self.accumulator as usize;
-        self.direct_page = data;
+        self.direct_page = self.accumulator as usize;
 
-        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Negative, (self.accumulator as i16).is_negative());
         self.processor_status.set_flag(Zero, self.accumulator == 0);
     }
 
     fn rts<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        let addr = mode.load(self, memory, !IS_BYTE);
+        let addr = mode.load(self, memory, !IS_BYTE) as usize;
 
-        self.program_counter = addr + 1;
+        self.program_counter = addr.wrapping_add(1);
 
         //println!("rts addr {:x}", addr + 1);
     }
@@ -1573,13 +1585,13 @@ impl CPU {
         let data = mode.load(self, memory, emu);
 
         let mut res = if emu {
-            ((self.accumulator as u8) as u32) + data as u32
+            ((self.accumulator as u8) as u32).wrapping_add(data as u32)
         } else {
-            (self.accumulator + data as u16) as u32
+            (self.accumulator.wrapping_add(data as u16)) as u32
         };
 
         if self.processor_status.get_flag(Carry) {
-            res += 1;
+            res = res.wrapping_add(1);
         }
 
         let (unsigned_overflow_check, signed_overflow_check) = if emu {
@@ -1643,10 +1655,9 @@ impl CPU {
 
     fn tdc(&mut self) {
         use self::StatusFlags::{Negative, Zero};
-        let data = self.direct_page;
         self.accumulator = self.direct_page as u16;
 
-        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Negative, self.accumulator.rotate_left(1) & 1 == 1);
         self.processor_status.set_flag(Zero, self.accumulator == 0);
     }
 
@@ -1657,9 +1668,9 @@ impl CPU {
     fn sta<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::AccumulatorRegisterSize;
 
-        let data = self.accumulator as usize;
-        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
+        let data = self.accumulator as u32;
 
+        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
         mode.store(self, memory, emu, data);
     }
 
@@ -1669,19 +1680,19 @@ impl CPU {
 
     fn sty<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::IndexRegisterSize;
+        
+        let data = self.index_y as u32;
 
-        let data = self.index_y as usize;
         let emu = self.processor_status.get_flag(IndexRegisterSize);
-
         mode.store(self, memory, emu, data);
     }
 
     fn stx<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::IndexRegisterSize;
 
-        let data = self.index_x as usize;
-        let emu = self.processor_status.get_flag(IndexRegisterSize);
+        let data = self.index_x as u32;
 
+        let emu = self.processor_status.get_flag(IndexRegisterSize);
         mode.store(self, memory, emu, data);
     }
 
@@ -1694,8 +1705,7 @@ impl CPU {
     }
 
     fn phb<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        let data = self.data_bank;
-
+        let data = self.data_bank as u32;
         mode.store(self, memory, IS_BYTE, data);
     }
 
@@ -1768,9 +1778,7 @@ impl CPU {
             self.index_x &= 0x00FF;
         }
 
-        let data = self.index_x as u8;
-
-        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Negative, self.index_x.rotate_left(1) & 1 == 1);
         self.processor_status.set_flag(Zero, self.index_x == 0);
     }
 
@@ -1778,7 +1786,7 @@ impl CPU {
         use self::StatusFlags::{Negative, Zero};
 
         let data = mode.load(self, memory, IS_BYTE);
-        self.data_bank = data;
+        self.data_bank = data as usize;
 
         self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
         self.processor_status.set_flag(Zero, self.data_bank == 0);
@@ -1801,7 +1809,16 @@ impl CPU {
     }
 
     fn cpy<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        panic!("cpy unimplemented")
+        use self::StatusFlags::{Negative, Zero, Carry, IndexRegisterSize};
+
+        let emu = self.processor_status.get_flag(IndexRegisterSize);
+        let data = mode.load(self, memory, emu) as u16;
+
+        let result = data.wrapping_sub(self.index_y) as i16;
+
+        self.processor_status.set_flag(Negative, result.is_negative());
+        self.processor_status.set_flag(Zero, result == 0);
+        self.processor_status.set_flag(Carry, self.index_y >= data);
     }
 
     fn cmp<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1811,11 +1828,11 @@ impl CPU {
         let data = mode.load(self, memory, emu);
 
         let (result, carry) = if emu {
-            let res = ((self.accumulator as u8) as u16) - (data as u16);
+            let res = ((self.accumulator as u8) as u16).wrapping_sub(data as u16);
 
             (res, (self.accumulator as u8) >= (data as u8))
         } else {
-            let res = ((self.accumulator as u32) - (data as u32)) as u16;
+            let res = ((self.accumulator as u32).wrapping_sub(data as u32)) as u16;
 
             (res, self.accumulator >= (data as u16))
         };
@@ -1834,20 +1851,18 @@ impl CPU {
     fn iny(&mut self) {
         use self::StatusFlags::{Negative, Zero};
 
-        self.index_y += 1;
-        let data = self.index_y;
+        self.index_y = self.index_y.wrapping_add(1);
 
-        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
-        self.processor_status.set_flag(Zero, data == 0);
+        self.processor_status.set_flag(Negative, (self.index_y as i16).is_negative());
+        self.processor_status.set_flag(Zero, self.index_y == 0);
     }
 
     fn dex(&mut self) {
         use self::StatusFlags::{Negative, Zero};
         
-        self.index_x -= 1;
-        let data = self.index_x;
+        self.index_x = self.index_x.wrapping_sub(1);
 
-        self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Negative, (self.index_x as i16).is_negative());
         self.processor_status.set_flag(Zero, self.index_x == 0);
     }
 
@@ -1862,13 +1877,13 @@ impl CPU {
             let data = mode.load(self, memory, IS_BYTE) as i8;
 
             if data < 0 {
-                self.program_counter -= !(data as usize) + 1;
+                self.program_counter = self.program_counter.wrapping_sub((!(data as usize)).wrapping_add(1));
             } else {
-                self.program_counter += data as usize;
+                self.program_counter = self.program_counter.wrapping_add(data as usize);
             }
         }
 
-        self.program_counter += 1;
+        self.program_counter = self.program_counter.wrapping_add(1);
     }
 
     fn pei<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1882,7 +1897,7 @@ impl CPU {
     fn phx<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::IndexRegisterSize;
 
-        let data = self.index_x as usize;
+        let data = self.index_x as u32;
 
         let emu = self.processor_status.get_flag(IndexRegisterSize);
         mode.store(self, memory, emu, data);
@@ -1896,13 +1911,13 @@ impl CPU {
         use self::StatusFlags::{Negative, Zero, Carry, IndexRegisterSize};
 
         let emu = self.processor_status.get_flag(IndexRegisterSize);
-        let data = mode.load(self, memory, emu);
+        let data = mode.load(self, memory, emu) as u16;
 
-        let result = (data as isize) - self.index_x as isize;
+        let result = data.wrapping_sub(self.index_x) as i16;
 
-        self.processor_status.set_flag(Negative, result.rotate_left(1) & 1 == 1);
+        self.processor_status.set_flag(Negative, result.is_negative());
         self.processor_status.set_flag(Zero, result == 0);
-        self.processor_status.set_flag(Carry, if result > 0 { false } else { true });
+        self.processor_status.set_flag(Carry, self.index_x >= data);
     }
 
     fn sbc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1926,7 +1941,9 @@ impl CPU {
         self.accumulator = 0;
         self.accumulator = low_to_high | high_to_low;
 
-        self.processor_status.set_flag(Negative, (high_to_low as u8).rotate_left(1) & 1 == 1);
+        let negative_check = (self.accumulator & 0x0080) >> 7 == 1;
+
+        self.processor_status.set_flag(Negative, negative_check);
         self.processor_status.set_flag(Zero, high_to_low == 0);
     }
 
