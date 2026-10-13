@@ -1,4 +1,4 @@
-use memory::Memory;
+use crate::memory::Memory;
 
 pub struct PPU;
 

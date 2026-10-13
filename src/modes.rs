@@ -1,5 +1,5 @@
-use cpu::CPU;
-use memory::Memory;
+use crate::cpu::CPU;
+use crate::memory::Memory;
 
 fn load_byte(memory: &Memory, addr: usize) -> u8 {
     memory.get_byte(addr)

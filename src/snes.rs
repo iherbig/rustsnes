@@ -1,7 +1,7 @@
-use memory::Memory;
-use cpu::CPU;
-use ppu::PPU;
-use apu::APU;
+use crate::memory::Memory;
+use crate::cpu::CPU;
+use crate::ppu::PPU;
+use crate::apu::APU;
 
 pub struct SNES {
     cpu: CPU,

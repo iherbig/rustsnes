@@ -1,7 +1,8 @@
-use memory::Memory;
-use modes::*;
-use modes::InstructionType::*;
 use std::fmt;
+
+use crate::memory::Memory;
+use crate::modes::*;
+use crate::modes::InstructionType::*;
 
 const IS_BYTE: bool = true;
 
@@ -1257,7 +1258,6 @@ macro_rules! decode_op_and_execute {
                 let mode = AbsoluteLongIndexedX;
                 $this.sbc(&mode, $mem);
             },
-            _ => panic!("{:x} is not an opcode", $op),
         }
     );
 }
@@ -1277,12 +1277,12 @@ pub struct CPU {
 
 impl CPU {
 	pub fn new(memory: &Memory) -> CPU {
-        use memory::RomType::*;
+        use crate::memory::RomType;
 
         let pc = memory.rom.reset_vector;
         let pb = match memory.rom.rom_type {
-            LoROM | FastLoROM => 0x80,
-            HiROM | FastHiROM => 0xC0,
+            RomType::LoROM | RomType::FastLoROM => 0x80,
+            RomType::HiROM | RomType::FastHiROM => 0xC0,
             _ => unreachable!(),
         };
 
