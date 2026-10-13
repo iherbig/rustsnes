@@ -4,7 +4,11 @@ use crate::memory::Memory;
 use crate::modes::*;
 use crate::modes::InstructionType::*;
 
-const IS_BYTE: bool = true;
+#[derive(Copy, Clone)]
+pub enum InstructionWidth {
+    Byte,
+    Short,
+}
 
 macro_rules! decode_op_and_execute {
     ($op:expr, $this:ident, $mem:ident) => (
@@ -1326,15 +1330,15 @@ impl CPU {
             self.processor_status.set_flag(IndexRegisterSize, true);
             let ps = self.processor_status.as_byte() as u32;
 
-            mode.store(self, memory, !IS_BYTE, pc);    
-            mode.store(self, memory, IS_BYTE, ps);
+            mode.store(self, memory, InstructionWidth::Short, pc);    
+            mode.store(self, memory, InstructionWidth::Byte, ps);
         } else {
             let pb = self.program_bank as u32;
             let ps = self.processor_status.as_byte() as u32;
 
-            mode.store(self, memory, IS_BYTE, pb);
-            mode.store(self, memory, !IS_BYTE, pc);
-            mode.store(self, memory, IS_BYTE, ps);
+            mode.store(self, memory, InstructionWidth::Byte, pb);
+            mode.store(self, memory, InstructionWidth::Short, pc);
+            mode.store(self, memory, InstructionWidth::Byte, ps);
 
             self.program_bank = 0;
         }
@@ -1348,8 +1352,8 @@ impl CPU {
     fn ora<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::{Negative, Zero, AccumulatorRegisterSize};
 
-        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
-        let data = mode.load(self, memory, emu);
+        let width = if self.processor_status.get_flag(AccumulatorRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        let data = mode.load(self, memory, width);
 
         self.accumulator |= data as u16;
         let result = self.accumulator;
@@ -1369,20 +1373,20 @@ impl CPU {
     fn php<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         let data = self.processor_status.as_byte() as u32;
 
-        mode.store(self, memory, IS_BYTE, data);
+        mode.store(self, memory, InstructionWidth::Byte, data);
     }
 
     fn phd<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         let data = self.direct_page as u32;
 
-        mode.store(self, memory, !IS_BYTE, data);
+        mode.store(self, memory, InstructionWidth::Short, data);
     }
 
     fn bpl<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::Negative;
         
         if !self.processor_status.get_flag(Negative) {
-            let data = mode.load(self, memory, IS_BYTE) as i8;
+            let data = mode.load(self, memory, InstructionWidth::Byte) as i8;
 
             if data < 0 {
                 self.program_counter = self.program_counter.wrapping_sub((!(data as usize)).wrapping_add(1));
@@ -1407,14 +1411,13 @@ impl CPU {
     fn inc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::{AccumulatorRegisterSize, Negative, Zero};
 
-        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
-        let data = mode.load(self, memory, emu).wrapping_add(1);
-        mode.store(self, memory, emu, data);
+        let width = if self.processor_status.get_flag(AccumulatorRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        let data = mode.load(self, memory, width).wrapping_add(1);
+        mode.store(self, memory, width, data);
 
-        let negative_check = if emu {
-            ((data & 0x80) >> 7) == 1
-        } else {
-            ((data & 0x8000) >> 15) == 1
+        let negative_check = match width {
+            InstructionWidth::Byte  => ((data & 0x80) >> 7) == 1,
+            InstructionWidth::Short => ((data & 0x8000) >> 15) == 1,
         };
 
         self.processor_status.set_flag(Negative, negative_check);
@@ -1435,13 +1438,13 @@ impl CPU {
 
         if is_long {
             let pb = self.program_bank as u32;
-            push.store(self, memory, IS_BYTE, pb);
+            push.store(self, memory, InstructionWidth::Byte, pb);
         }
 
-        push.store(self, memory, !IS_BYTE, pc);
+        push.store(self, memory, InstructionWidth::Short, pc);
 
         let (bank, addr) = {
-            let tmp_addr = mode.load(self, memory, !IS_BYTE) as usize;
+            let tmp_addr = mode.load(self, memory, InstructionWidth::Short) as usize;
             let bank = (tmp_addr & 0xFF0000) >> 16;
 
             (bank, tmp_addr & 0x00FFFF)
@@ -1475,7 +1478,7 @@ impl CPU {
     fn pld<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         use self::StatusFlags::{Zero, Negative};
 
-        self.direct_page = mode.load(self, memory, !IS_BYTE) as usize;
+        self.direct_page = mode.load(self, memory, InstructionWidth::Short) as usize;
 
         let negative_check = ((self.direct_page & 0x8000) >> 15) == 1;
 
@@ -1524,17 +1527,17 @@ impl CPU {
 
         let data = self.accumulator as u32;
 
-        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
-        mode.store(self, memory, emu, data);
+        let width = if self.processor_status.get_flag(AccumulatorRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        mode.store(self, memory, width, data);
     }
 
     fn phk<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         let data = self.program_bank as u32;
-        mode.store(self, memory, IS_BYTE, data);
+        mode.store(self, memory, InstructionWidth::Byte, data);
     }
 
     fn jmp<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
-        let jump_addr = mode.load(self, memory, !IS_BYTE) as usize;
+        let jump_addr = mode.load(self, memory, InstructionWidth::Short) as usize;
         self.program_counter = jump_addr & 0x00FFFF;
         self.program_bank = (jump_addr & 0xFF0000) >> 16;
     //    println!("jump_addr {:x}", jump_addr);
@@ -1557,8 +1560,8 @@ impl CPU {
 
         let data = self.index_y as u32;
 
-        let emu = self.processor_status.get_flag(IndexRegisterSize);
-        mode.store(self, memory, emu, data);
+        let width = if self.processor_status.get_flag(IndexRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        mode.store(self, memory, width, data);
     }
 
     fn tcd(&mut self) {
@@ -1571,7 +1574,7 @@ impl CPU {
     }
 
     fn rts<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
-        let addr = mode.load(self, memory, !IS_BYTE) as usize;
+        let addr = mode.load(self, memory, InstructionWidth::Short) as usize;
 
         self.program_counter = addr.wrapping_add(1);
 
@@ -1581,34 +1584,35 @@ impl CPU {
     fn adc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::{AccumulatorRegisterSize, Negative, Overflow, Zero, Carry};
 
-        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
-        let data = mode.load(self, memory, emu);
+        let width = if self.processor_status.get_flag(AccumulatorRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        let data = mode.load(self, memory, width );
 
-        let mut res = if emu {
-            ((self.accumulator as u8) as u32).wrapping_add(data as u32)
-        } else {
-            (self.accumulator.wrapping_add(data as u16)) as u32
+        let mut res = match width {
+            InstructionWidth::Byte  => ((self.accumulator as u8) as u32).wrapping_add(data as u32),
+            InstructionWidth::Short => (self.accumulator.wrapping_add(data as u16)) as u32,
         };
 
         if self.processor_status.get_flag(Carry) {
             res = res.wrapping_add(1);
         }
 
-        let (unsigned_overflow_check, signed_overflow_check) = if emu {
-            self.accumulator = (res as u8) as u16;
-            
-            (((res & 0x100) >> 8) == 1, ((res & 0x80) >> 7) == 0)
-        } else {
-            self.accumulator = res as u16;
+        let (unsigned_overflow_check, signed_overflow_check) = match width {
+            InstructionWidth::Byte => {
+                self.accumulator = (res as u8) as u16;
 
-            (((res & 0x10000) >> 16) == 1, ((res & 0x8000) >> 15) == 0)
+                (((res & 0x100) >> 8) == 1, ((res & 0x80) >> 7) == 0)
+            },
+            InstructionWidth::Short => {
+                self.accumulator = res as u16;
+
+                (((res & 0x10000) >> 16) == 1, ((res & 0x8000) >> 15) == 0)
+            },
         };
 
-        if emu {
-            self.processor_status.set_flag(Negative, (res as u16).rotate_left(1) & 1 == 1);
-        } else {
-            self.processor_status.set_flag(Negative, (res as u16).rotate_left(1) & 1 == 1);
-        }
+        match width {
+            InstructionWidth::Byte  => self.processor_status.set_flag(Negative, (res as u16).rotate_left(1) & 1 == 1),
+            InstructionWidth::Short => self.processor_status.set_flag(Negative, (res as u16).rotate_left(1) & 1 == 1),
+        };
 
         self.processor_status.set_flag(Overflow, signed_overflow_check);
         self.processor_status.set_flag(Zero, res == 0);
@@ -1622,9 +1626,9 @@ impl CPU {
     fn stz<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::AccumulatorRegisterSize;
 
-        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
+        let width = if self.processor_status.get_flag(AccumulatorRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
 
-        mode.store(self, memory, emu, 0);
+        mode.store(self, memory, width, 0);
     }
 
     fn ror<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1670,8 +1674,8 @@ impl CPU {
 
         let data = self.accumulator as u32;
 
-        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
-        mode.store(self, memory, emu, data);
+        let width = if self.processor_status.get_flag(AccumulatorRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        mode.store(self, memory, width, data);
     }
 
     fn brl<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1683,8 +1687,8 @@ impl CPU {
         
         let data = self.index_y as u32;
 
-        let emu = self.processor_status.get_flag(IndexRegisterSize);
-        mode.store(self, memory, emu, data);
+        let width = if self.processor_status.get_flag(IndexRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        mode.store(self, memory, width, data);
     }
 
     fn stx<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1692,8 +1696,8 @@ impl CPU {
 
         let data = self.index_x as u32;
 
-        let emu = self.processor_status.get_flag(IndexRegisterSize);
-        mode.store(self, memory, emu, data);
+        let width = if self.processor_status.get_flag(IndexRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        mode.store(self, memory, width, data);
     }
 
     fn dey(&mut self) {
@@ -1706,7 +1710,7 @@ impl CPU {
 
     fn phb<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         let data = self.data_bank as u32;
-        mode.store(self, memory, IS_BYTE, data);
+        mode.store(self, memory, InstructionWidth::Byte, data);
     }
 
     fn bcc<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
@@ -1734,8 +1738,8 @@ impl CPU {
     fn ldy<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::{Negative, Zero, IndexRegisterSize};
         
-        let emu = self.processor_status.get_flag(IndexRegisterSize);
-        let data = mode.load(self, memory, emu);
+        let width = if self.processor_status.get_flag(IndexRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        let data = mode.load(self, memory, width);
 
         self.index_y = data as u16;
 
@@ -1746,8 +1750,8 @@ impl CPU {
     fn lda<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         use self::StatusFlags::{AccumulatorRegisterSize, Negative, Zero};
 
-        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
-        let data = mode.load(self, memory, emu);
+        let width = if self.processor_status.get_flag(AccumulatorRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        let data = mode.load(self, memory, width);
         self.accumulator = data as u16;
         
         self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
@@ -1757,8 +1761,8 @@ impl CPU {
     fn ldx<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         use self::StatusFlags::{IndexRegisterSize, Zero, Negative};
 
-        let emu = self.processor_status.get_flag(IndexRegisterSize);
-        let data = mode.load(self, memory, emu);
+        let width = if self.processor_status.get_flag(IndexRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        let data = mode.load(self, memory, width);
         self.index_x = data as u16;
 
         self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
@@ -1785,7 +1789,7 @@ impl CPU {
     fn plb<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
         use self::StatusFlags::{Negative, Zero};
 
-        let data = mode.load(self, memory, IS_BYTE);
+        let data = mode.load(self, memory, InstructionWidth::Byte);
         self.data_bank = data as usize;
 
         self.processor_status.set_flag(Negative, data.rotate_left(1) & 1 == 1);
@@ -1811,8 +1815,8 @@ impl CPU {
     fn cpy<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::{Negative, Zero, Carry, IndexRegisterSize};
 
-        let emu = self.processor_status.get_flag(IndexRegisterSize);
-        let data = mode.load(self, memory, emu) as u16;
+        let width = if self.processor_status.get_flag(IndexRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        let data = mode.load(self, memory, width) as u16;
 
         let result = data.wrapping_sub(self.index_y) as i16;
 
@@ -1824,17 +1828,20 @@ impl CPU {
     fn cmp<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::{Negative, Zero, Carry, AccumulatorRegisterSize};
 
-        let emu = self.processor_status.get_flag(AccumulatorRegisterSize);
-        let data = mode.load(self, memory, emu);
+        let width = if self.processor_status.get_flag(AccumulatorRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        let data = mode.load(self, memory, width);
 
-        let (result, carry) = if emu {
-            let res = ((self.accumulator as u8) as u16).wrapping_sub(data as u16);
+        let (result, carry) = match width {
+            InstructionWidth::Byte => {
+                let res = ((self.accumulator as u8) as u16).wrapping_sub(data as u16);
 
-            (res, (self.accumulator as u8) >= (data as u8))
-        } else {
-            let res = ((self.accumulator as u32).wrapping_sub(data as u32)) as u16;
+                (res, (self.accumulator as u8) >= (data as u8))
+            },
+            InstructionWidth::Short => {
+                let res = ((self.accumulator as u32).wrapping_sub(data as u32)) as u16;
 
-            (res, self.accumulator >= (data as u16))
+                (res, self.accumulator >= (data as u16))
+            },
         };
 
         self.processor_status.set_flag(Negative, result.rotate_left(1) & 1 == 1);
@@ -1843,7 +1850,7 @@ impl CPU {
     }
 
     fn rep<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
-        let val = mode.load(self, memory, IS_BYTE);
+        let val = mode.load(self, memory, InstructionWidth::Byte);
 
         self.processor_status.set_by_byte(self.emulation_mode, val as u8, false);
     }
@@ -1874,7 +1881,7 @@ impl CPU {
         use self::StatusFlags::Zero;
 
         if !self.processor_status.get_flag(Zero) {
-            let data = mode.load(self, memory, IS_BYTE) as i8;
+            let data = mode.load(self, memory, InstructionWidth::Byte) as i8;
 
             if data < 0 {
                 self.program_counter = self.program_counter.wrapping_sub((!(data as usize)).wrapping_add(1));
@@ -1899,8 +1906,8 @@ impl CPU {
 
         let data = self.index_x as u32;
 
-        let emu = self.processor_status.get_flag(IndexRegisterSize);
-        mode.store(self, memory, emu, data);
+        let width = if self.processor_status.get_flag(IndexRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        mode.store(self, memory, width, data);
     }
 
     fn stp(&mut self) {
@@ -1910,8 +1917,8 @@ impl CPU {
     fn cpx<T: Instruction>(&mut self, mode: &T, memory: &mut Memory) {
         use self::StatusFlags::{Negative, Zero, Carry, IndexRegisterSize};
 
-        let emu = self.processor_status.get_flag(IndexRegisterSize);
-        let data = mode.load(self, memory, emu) as u16;
+        let width = if self.processor_status.get_flag(IndexRegisterSize) { InstructionWidth::Byte } else { InstructionWidth::Short };
+        let data = mode.load(self, memory, width) as u16;
 
         let result = data.wrapping_sub(self.index_x) as i16;
 
@@ -1972,7 +1979,7 @@ impl CPU {
     }
 
     fn sep<T: Instruction>(&mut self, mode: &T, memory: &Memory) {
-        let val = mode.load(self, memory, IS_BYTE);
+        let val = mode.load(self, memory, InstructionWidth::Byte);
         
         self.processor_status.set_by_byte(self.emulation_mode, val as u8, true);
     }
